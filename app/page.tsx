@@ -3,6 +3,10 @@ import { SiteFooter } from "@/components/site-footer"
 import { CampaignDirectory } from "@/components/campaign-directory"
 import { getCampaigns } from "@/lib/queries"
 
+// The campaign directory is live and DB-backed, so render on demand rather
+// than prerendering (the database is not reachable at build time).
+export const dynamic = "force-dynamic"
+
 export default async function Home() {
   const campaigns = await getCampaigns()
 

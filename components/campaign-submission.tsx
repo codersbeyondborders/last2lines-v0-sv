@@ -103,6 +103,9 @@ function ActiveForm({ campaign }: { campaign: Campaign }) {
   const [touched, setTouched] = useState<Record<string, boolean>>({})
   const [status, setStatus] = useState<Status>("idle")
   const [serverError, setServerError] = useState<string | null>(null)
+  const [outcome, setOutcome] = useState<
+    "approved" | "rejected" | "pending" | null
+  >(null)
 
   function validate(): FieldErrors {
     const errors: FieldErrors = {}
@@ -161,6 +164,7 @@ function ActiveForm({ campaign }: { campaign: Campaign }) {
       }
 
       setStatus("success")
+      setOutcome(result.status ?? "pending")
       setFullName("")
       setEmail("")
       setVerseOne("")
@@ -176,25 +180,55 @@ function ActiveForm({ campaign }: { campaign: Campaign }) {
   }
 
   if (status === "success") {
+    const success = {
+      approved: {
+        title: "Your lines are now part of the poem",
+        body: "Our AI moderation check approved your couplet and it has been stitched into the living poem below.",
+      },
+      rejected: {
+        title: "Your couplet wasn't approved",
+        body: "Our AI moderation check flagged this submission as outside the campaign guidelines, so it wasn't added to the poem. You're welcome to revise and try again.",
+      },
+      pending: {
+        title: "Your lines are on their way",
+        body: campaign.aiModeration
+          ? "Our AI moderation check wasn't fully certain, so your couplet has been queued for a human reviewer. Once approved, it will join the living poem."
+          : "Your couplet is queued for review. Once approved, it will be stitched into the living poem.",
+      },
+    }[outcome ?? "pending"]
+
+    const rejected = outcome === "rejected"
+
     return (
       <Card className="mx-auto max-w-xl text-center" size="default">
         <CardContent className="flex flex-col items-center gap-4 py-10">
-          <CheckCircle2 className="size-12 text-primary" aria-hidden="true" />
+          {rejected ? (
+            <AlertCircle
+              className="size-12 text-muted-foreground"
+              aria-hidden="true"
+            />
+          ) : (
+            <CheckCircle2 className="size-12 text-primary" aria-hidden="true" />
+          )}
           <div className="space-y-2">
-            <h3 className="font-serif text-2xl font-semibold">
-              Your lines are on their way
+            <h3 className="font-serif text-2xl font-semibold text-balance">
+              {success.title}
             </h3>
             <p
               className="leading-relaxed text-muted-foreground text-pretty"
               aria-live="polite"
             >
-              {campaign.aiModeration
-                ? "Our AI moderation check is reviewing your couplet for the campaign theme. Once approved, it will be stitched into the living poem."
-                : "Your couplet is queued for review. Once approved, it will be stitched into the living poem."}
+              {success.body}
             </p>
           </div>
-          <Button variant="outline" onClick={() => setStatus("idle")}>
-            Write another couplet
+          <Button
+            variant="outline"
+            onClick={() => {
+              setStatus("idle")
+              setOutcome(null)
+            }}
+          >
+            {rejected ? "Try another couplet" : "Write another couplet"}
           </Button>
         </CardContent>
       </Card>
