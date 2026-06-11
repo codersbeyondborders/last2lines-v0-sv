@@ -24,12 +24,12 @@ Last2Lines lets anyone add a **couplet (exactly two lines)** to an active campai
 | :-- | :-- | :-- |
 | Framework | Next.js 15 App Router | **Next.js 16 App Router** (current), React 19, Server Components |
 | UI | Tailwind + shadcn/ui | Tailwind v4 + shadcn/ui, lucide-react icons |
-| Database | AWS Aurora/RDS MySQL | **Decision needed** — recommend Neon Postgres (default) or Amazon Aurora PostgreSQL if AWS parity is required |
-| Auth (optional) | — | Better Auth on Neon if user accounts are needed |
-| AI Moderation | OpenAI GPT-4o-mini | **Vercel AI Gateway** (zero-config, e.g. `openai/gpt-5-mini`) for profanity / theme-relevance / 2-line checks |
+| Database | AWS Aurora/RDS MySQL | **Amazon Aurora PostgreSQL** (confirmed) — IAM auth via `pg` + `@aws-sdk/rds-signer` |
+| Auth (optional) | — | Anonymous contributions by default; add accounts only if required |
+| AI Moderation | OpenAI GPT-4o-mini | **Vercel AI Gateway** (confirmed, zero-config, e.g. `openai/gpt-5-mini`) for profanity / theme-relevance / 2-line checks |
 | Hosting | Vercel | Vercel |
 
-> The README specifies AWS + OpenAI directly. Before backend work begins we should confirm whether to honor AWS Aurora PostgreSQL or use the Neon default, and confirm the AI Gateway is acceptable for moderation.
+> **Decisions locked in:** Backend uses **Amazon Aurora PostgreSQL**; AI moderation uses the **Vercel AI Gateway** (no direct OpenAI key).
 
 ---
 
@@ -67,7 +67,7 @@ Last2Lines lets anyone add a **couplet (exactly two lines)** to an active campai
 - Lifecycle states (loading, empty queue, error)
 
 ### Phase 3 — Database Integration
-- Connect chosen DB (Neon or Aurora PostgreSQL)
+- Connect **Amazon Aurora PostgreSQL** (IAM auth via `pg` + `@aws-sdk/rds-signer`)
 - Create `campaigns` + `contributions` schema
 - Server actions / route handlers for: fetch approved tapestry, submit contribution (pending), fetch moderation queue, approve/reject
 - Replace mock arrays with real queries; keep per-query scoping/validation
@@ -90,9 +90,12 @@ Last2Lines lets anyone add a **couplet (exactly two lines)** to an active campai
 
 ---
 
-## 5. Open Questions (confirm before backend phases)
-1. **Database**: Neon Postgres (v0 default) or Amazon Aurora PostgreSQL to match the AWS architecture?
-2. **AI moderation**: OK to use Vercel AI Gateway instead of a direct OpenAI key?
+## 5. Decisions & Open Questions
+**Confirmed**
+1. **Database**: Amazon Aurora PostgreSQL.
+2. **AI moderation**: Vercel AI Gateway (no direct OpenAI key).
+
+**Still open**
 3. **Auth**: Anonymous contributions only, or accounts for contributors/moderators?
 4. **Moderation default**: AI auto-approve, or always route to a human queue first?
 
