@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import {
   LayoutDashboard,
   Megaphone,
@@ -9,8 +9,10 @@ import {
   Users,
   Settings,
   Feather,
+  LogOut,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { signOut } from "@/lib/actions"
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, exact: true },
@@ -22,9 +24,17 @@ const NAV_ITEMS = [
 
 export function AdminSidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname()
+  const router = useRouter()
+
+  async function handleSignOut() {
+    onNavigate?.()
+    await signOut()
+    router.push("/auth/login")
+    router.refresh()
+  }
 
   return (
-    <nav aria-label="Admin navigation" className="flex flex-col gap-1 p-3">
+    <nav aria-label="Admin navigation" className="flex h-full flex-col gap-1 p-3">
       <Link
         href="/dashboard"
         onClick={onNavigate}
@@ -56,6 +66,15 @@ export function AdminSidebarNav({ onNavigate }: { onNavigate?: () => void }) {
           </Link>
         )
       })}
+
+      <button
+        type="button"
+        onClick={handleSignOut}
+        className="mt-auto flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+      >
+        <LogOut className="size-4 shrink-0" aria-hidden="true" />
+        Log out
+      </button>
     </nav>
   )
 }
