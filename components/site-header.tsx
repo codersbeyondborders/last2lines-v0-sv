@@ -24,16 +24,16 @@ export function SiteHeader() {
           className="hidden items-center gap-1 text-sm font-medium text-muted-foreground sm:flex"
         >
           <Link
-            href="/#tapestry"
+            href="/"
             className="rounded-md px-3 py-2 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            The Tapestry
+            Campaigns
           </Link>
           <Link
-            href="/#contribute"
+            href="/#campaigns"
             className="rounded-md px-3 py-2 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            Contribute
+            Browse
           </Link>
           <Link
             href="/dashboard"
@@ -49,7 +49,7 @@ export function SiteHeader() {
             size="sm"
             nativeButton={false}
             className="hidden sm:inline-flex"
-            render={<Link href="/#contribute">Add your lines</Link>}
+            render={<Link href="/campaign/two-lines-for-the-earth#contribute">Add your lines</Link>}
           />
         </div>
       </div>

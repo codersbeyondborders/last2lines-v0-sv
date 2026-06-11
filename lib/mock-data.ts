@@ -11,12 +11,17 @@ export type ContributionStatus = 'pending' | 'approved' | 'rejected'
 export type ModerationLevel = 'lenient' | 'standard' | 'strict'
 export type AuthorStatus = 'active' | 'banned'
 
+/** Time-based phase derived from start/close dates (distinct from publication `status`). */
+export type CampaignPhase = 'upcoming' | 'active' | 'completed'
+
 export interface Campaign {
   id: string
   slug: string
   title: string
   tagline: string
   description: string
+  /** Step-by-step guidance shown on the campaign page. */
+  instructions: string[]
   theme: string
   accentColor: string
   status: CampaignStatus
@@ -24,8 +29,14 @@ export interface Campaign {
   aiModeration: boolean
   aiLevel: ModerationLevel
   contributionCount: number
+  /** Primary hero/background image. */
+  backgroundImageUrl: string
+  /** Optional additional images for the hero carousel. */
+  campaignImages: string[]
   videoLink: string | null
   donationLink: string | null
+  startDate: string
+  closeDate: string
   createdAt: string
 }
 
@@ -72,14 +83,29 @@ export const MOCK_CAMPAIGNS: Campaign[] = [
     tagline: 'A living poem written by the world, for the world.',
     description:
       'Add exactly two lines to a single, continuously growing poem about our shared home. Every approved couplet is stitched into one endless tapestry of collective hope, grief, and resolve.',
+    instructions: [
+      'Write exactly two lines of free verse — no more, no less.',
+      'Keep each line under 100 characters so it reads cleanly in the poem.',
+      'Stay close to the theme of climate and our shared planet.',
+      'An AI moderation check reviews every couplet for theme and tone before it joins the poem.',
+    ],
     theme: 'climate',
     accentColor: 'emerald',
     status: 'active',
     aiModeration: true,
     aiLevel: 'standard',
     contributionCount: 8,
+    backgroundImageUrl:
+      '/placeholder.svg?height=600&width=960&query=lush%20green%20forest%20canopy%20from%20above%20with%20misty%20morning%20light',
+    campaignImages: [
+      '/placeholder.svg?height=600&width=960&query=lush%20green%20forest%20canopy%20from%20above%20with%20misty%20morning%20light',
+      '/placeholder.svg?height=600&width=960&query=dramatic%20melting%20glacier%20with%20deep%20blue%20ice',
+      '/placeholder.svg?height=600&width=960&query=calm%20ocean%20horizon%20at%20golden%20hour',
+    ],
     videoLink: 'https://example.com/earth-intro',
     donationLink: 'https://example.com/donate/earth',
+    startDate: '2026-05-01T00:00:00.000Z',
+    closeDate: '2026-09-30T23:59:59.000Z',
     createdAt: '2026-01-12T09:00:00.000Z',
   },
   {
@@ -89,14 +115,27 @@ export const MOCK_CAMPAIGNS: Campaign[] = [
     tagline: 'Two lines for every vanishing waterway.',
     description:
       'A campaign gathering couplets that honor the rivers, lakes, and oceans we are losing — and the ones we can still save.',
+    instructions: [
+      'Write exactly two lines about a river, lake, or ocean that matters to you.',
+      'Keep each line under 100 characters.',
+      'Center water, memory, and renewal in your imagery.',
+      'Every submission passes an AI moderation check before publication.',
+    ],
     theme: 'water',
     accentColor: 'emerald',
     status: 'draft',
     aiModeration: true,
     aiLevel: 'strict',
     contributionCount: 0,
+    backgroundImageUrl:
+      '/placeholder.svg?height=600&width=960&query=winding%20river%20through%20a%20green%20valley%20at%20dawn',
+    campaignImages: [
+      '/placeholder.svg?height=600&width=960&query=winding%20river%20through%20a%20green%20valley%20at%20dawn',
+    ],
     videoLink: null,
     donationLink: 'https://example.com/donate/water',
+    startDate: '2026-07-15T00:00:00.000Z',
+    closeDate: '2026-11-30T23:59:59.000Z',
     createdAt: '2026-05-28T13:30:00.000Z',
   },
   {
@@ -106,14 +145,27 @@ export const MOCK_CAMPAIGNS: Campaign[] = [
     tagline: "Couplets for the world's forests.",
     description:
       'A completed seasonal campaign celebrating the forests and the people who defend them.',
+    instructions: [
+      'Write exactly two lines in honor of a forest or the people who protect it.',
+      'Keep each line under 100 characters.',
+      'Evoke canopy, root, and the quiet work of conservation.',
+      'All couplets were reviewed by an AI moderation pass before joining the poem.',
+    ],
     theme: 'forests',
     accentColor: 'emerald',
     status: 'completed',
     aiModeration: false,
     aiLevel: 'lenient',
     contributionCount: 142,
+    backgroundImageUrl:
+      '/placeholder.svg?height=600&width=960&query=ancient%20tall%20forest%20trees%20with%20sunlight%20streaming%20through',
+    campaignImages: [
+      '/placeholder.svg?height=600&width=960&query=ancient%20tall%20forest%20trees%20with%20sunlight%20streaming%20through',
+    ],
     videoLink: 'https://example.com/canopy',
     donationLink: null,
+    startDate: '2025-09-01T00:00:00.000Z',
+    closeDate: '2025-12-15T23:59:59.000Z',
     createdAt: '2025-09-01T08:00:00.000Z',
   },
 ]
@@ -326,3 +378,60 @@ export const LINE_COUNT = APPROVED_COUNT * 2
 export const AUTHOR_COUNT = new Set(
   APPROVED_CONTRIBUTIONS.map((c) => c.authorName?.trim() || 'anonymous'),
 ).size
+
+// ----------------------------------------------------------------------------
+// Campaign helpers (Phase 1 public flow)
+// ----------------------------------------------------------------------------
+
+/**
+ * Derive a campaign's time-based phase from its start/close dates.
+ * In Phase 3 this logic moves to the backend, comparing against the DB clock.
+ */
+export function getCampaignPhase(
+  campaign: Campaign,
+  now: Date = new Date(),
+): CampaignPhase {
+  const start = new Date(campaign.startDate)
+  const close = new Date(campaign.closeDate)
+  if (now < start) return 'upcoming'
+  if (now > close) return 'completed'
+  return 'active'
+}
+
+export function getCampaignBySlug(slug: string): Campaign | undefined {
+  return MOCK_CAMPAIGNS.find((c) => c.slug === slug)
+}
+
+export function getApprovedContributions(campaignId: string): Contribution[] {
+  return MOCK_CONTRIBUTIONS.filter(
+    (c) => c.campaignId === campaignId && c.status === 'approved',
+  ).sort((a, b) => a.sequenceNumber - b.sequenceNumber)
+}
+
+export interface CampaignStats {
+  contributors: number
+  couplets: number
+  lines: number
+}
+
+export function getCampaignStats(campaign: Campaign): CampaignStats {
+  const approved = getApprovedContributions(campaign.id)
+  // For seeded/historical campaigns, fall back to the stored count.
+  const couplets = Math.max(approved.length, campaign.contributionCount)
+  const contributors = new Set(
+    approved.map((c) => c.authorName?.trim() || c.authorId),
+  ).size
+  return {
+    contributors: Math.max(contributors, couplets > 0 ? 1 : 0),
+    couplets,
+    lines: couplets * 2,
+  }
+}
+
+export function formatCampaignDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  })
+}
