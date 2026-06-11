@@ -30,6 +30,12 @@ export function SiteFooter() {
             Browse
           </Link>
           <Link
+            href="/about"
+            className="rounded-md transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            About
+          </Link>
+          <Link
             href="/dashboard"
             className="rounded-md transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
