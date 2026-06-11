@@ -14,8 +14,8 @@ export function SiteHeader() {
           <span className="flex size-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
             <Feather className="size-4" aria-hidden="true" />
           </span>
-          <span className="font-serif text-lg font-semibold tracking-tight">
-            Last2Lines
+          <span className="font-sans text-lg font-semibold tracking-tight">
+            Last || Lines
           </span>
         </Link>
 
