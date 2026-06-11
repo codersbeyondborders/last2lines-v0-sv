@@ -11,9 +11,7 @@ export function SiteHeader() {
           href="/"
           className="flex items-center gap-2 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
-          <span className="flex size-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
-            <Feather className="size-4" aria-hidden="true" />
-          </span>
+
           <span className="font-sans text-lg font-semibold tracking-tight">
             Last || Lines
           </span>
