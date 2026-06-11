@@ -18,16 +18,16 @@ export function SiteFooter() {
           className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-muted-foreground"
         >
           <Link
-            href="/#tapestry"
+            href="/"
             className="rounded-md transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            The Tapestry
+            Campaigns
           </Link>
           <Link
-            href="/#contribute"
+            href="/#campaigns"
             className="rounded-md transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            Contribute
+            Browse
           </Link>
           <Link
             href="/dashboard"
