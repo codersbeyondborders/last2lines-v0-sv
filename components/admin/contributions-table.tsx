@@ -11,11 +11,14 @@ import {
   AlertCircle,
 } from "lucide-react"
 import {
-  MOCK_CONTRIBUTIONS,
-  MOCK_CAMPAIGNS,
   type Contribution,
   type ContributionStatus,
 } from "@/lib/mock-data"
+import {
+  moderateContribution,
+  editContribution,
+  deleteContribution,
+} from "@/lib/actions"
 import {
   Table,
   TableBody,
@@ -47,16 +50,18 @@ const FILTERS: { key: FilterKey; label: string }[] = [
   { key: "rejected", label: "Rejected" },
 ]
 
-const CAMPAIGN_TITLE = new Map(MOCK_CAMPAIGNS.map((c) => [c.id, c.title]))
+const CAMPAIGN_TITLE_FALLBACK = "—"
 
 export function ContributionsTable({
+  initialContributions,
+  campaignTitles,
   authorId,
 }: {
+  initialContributions: Contribution[]
+  campaignTitles: Record<string, string>
   authorId?: string
 }) {
-  const [items, setItems] = useState<Contribution[]>(() => [
-    ...MOCK_CONTRIBUTIONS,
-  ])
+  const [items, setItems] = useState<Contribution[]>(initialContributions)
   const [filter, setFilter] = useState<FilterKey>("all")
   const [actingId, setActingId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -86,24 +91,37 @@ export function ContributionsTable({
     )
   }, [items, filter, authorId])
 
-  function moderate(
+  async function moderate(
     id: string,
     status: ContributionStatus,
     reason: string | null,
   ) {
     setError(null)
     setActingId(id)
+    const previous = items
+    // Optimistic update for instant feedback.
     setItems((prev) =>
       prev.map((c) =>
         c.id === id ? { ...c, status, moderationReason: reason } : c,
       ),
     )
-    window.setTimeout(() => setActingId(null), 300)
+    const result = await moderateContribution({ id, status, reason })
+    setActingId(null)
+    if (!result.ok) {
+      setItems(previous)
+      setError(result.error ?? "Could not update this contribution.")
+    }
   }
 
-  function remove(id: string) {
+  async function remove(id: string) {
     setError(null)
+    const previous = items
     setItems((prev) => prev.filter((c) => c.id !== id))
+    const result = await deleteContribution(id)
+    if (!result.ok) {
+      setItems(previous)
+      setError(result.error ?? "Could not delete this contribution.")
+    }
   }
 
   function openEdit(c: Contribution) {
@@ -112,17 +130,21 @@ export function ContributionsTable({
     setEditLineTwo(c.lineTwo)
   }
 
-  function saveEdit() {
+  async function saveEdit() {
     if (!editing) return
     const id = editing.id
+    const lineOne = editLineOne.trim()
+    const lineTwo = editLineTwo.trim()
+    const previous = items
     setItems((prev) =>
-      prev.map((c) =>
-        c.id === id
-          ? { ...c, lineOne: editLineOne.trim(), lineTwo: editLineTwo.trim() }
-          : c,
-      ),
+      prev.map((c) => (c.id === id ? { ...c, lineOne, lineTwo } : c)),
     )
     setEditing(null)
+    const result = await editContribution({ id, lineOne, lineTwo })
+    if (!result.ok) {
+      setItems(previous)
+      setError(result.error ?? "Could not save your edits.")
+    }
   }
 
   return (
@@ -203,7 +225,7 @@ export function ContributionsTable({
                     {c.sequenceNumber || "—"}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
-                    {CAMPAIGN_TITLE.get(c.campaignId) ?? "—"}
+                    {campaignTitles[c.campaignId] ?? CAMPAIGN_TITLE_FALLBACK}
                   </TableCell>
                   <TableCell>
                     <span className="font-medium">

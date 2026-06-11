@@ -9,11 +9,8 @@ import {
   MoreHorizontal,
   AlertCircle,
 } from "lucide-react"
-import {
-  MOCK_AUTHORS,
-  MOCK_CONTRIBUTIONS,
-  type Author,
-} from "@/lib/mock-data"
+import { type Author } from "@/lib/mock-data"
+import { setAuthorStatus } from "@/lib/actions"
 import {
   Table,
   TableBody,
@@ -41,23 +38,29 @@ function formatDate(iso: string) {
   })
 }
 
-const SUBMISSION_COUNT = MOCK_CONTRIBUTIONS.reduce<Record<string, number>>(
-  (acc, c) => {
-    acc[c.authorId] = (acc[c.authorId] ?? 0) + 1
-    return acc
-  },
-  {},
-)
+const SUBMISSION_COUNT_FALLBACK = 0
 
-export function AuthorsTable() {
-  const [authors, setAuthors] = useState<Author[]>(() => [...MOCK_AUTHORS])
+export function AuthorsTable({
+  initialAuthors,
+  submissionCounts,
+}: {
+  initialAuthors: Author[]
+  submissionCounts: Record<string, number>
+}) {
+  const [authors, setAuthors] = useState<Author[]>(initialAuthors)
   const [error, setError] = useState<string | null>(null)
 
-  function setStatus(id: string, status: Author["status"]) {
+  async function setStatus(id: string, status: Author["status"]) {
     setError(null)
+    const previous = authors
     setAuthors((prev) =>
       prev.map((a) => (a.id === id ? { ...a, status } : a)),
     )
+    const result = await setAuthorStatus({ id, status })
+    if (!result.ok) {
+      setAuthors(previous)
+      setError(result.error ?? "Could not update this author.")
+    }
   }
 
   if (authors.length === 0) {
@@ -108,7 +111,7 @@ export function AuthorsTable() {
                   <AuthorStatusBadge status={a.status} />
                 </TableCell>
                 <TableCell className="text-right tabular-nums">
-                  {SUBMISSION_COUNT[a.id] ?? 0}
+                  {submissionCounts[a.id] ?? SUBMISSION_COUNT_FALLBACK}
                 </TableCell>
                 <TableCell className="text-muted-foreground">
                   {formatDate(a.joinedAt)}

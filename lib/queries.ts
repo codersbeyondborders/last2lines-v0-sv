@@ -212,6 +212,14 @@ export async function getAuthors(): Promise<Author[]> {
   return rows.map(mapAuthor)
 }
 
+/** Map of author id -> total submission count (all statuses). */
+export async function getSubmissionCounts(): Promise<Record<string, number>> {
+  const { rows } = await query<{ author_id: string; count: string }>(
+    `SELECT author_id, count(*)::int AS count FROM contributions GROUP BY author_id`,
+  )
+  return Object.fromEntries(rows.map((r) => [r.author_id, Number(r.count)]))
+}
+
 export async function getModerationSettings(
   campaignId: string,
 ): Promise<ModerationSettings | null> {

@@ -3,8 +3,10 @@ import { Plus } from "lucide-react"
 import { PageHeader } from "@/components/admin/page-header"
 import { CampaignsTable } from "@/components/admin/campaigns-table"
 import { Button } from "@/components/ui/button"
+import { getCampaigns } from "@/lib/queries"
 
-export default function CampaignsPage() {
+export default async function CampaignsPage() {
+  const campaigns = await getCampaigns()
   return (
     <>
       <PageHeader
@@ -22,7 +24,7 @@ export default function CampaignsPage() {
           />
         }
       />
-      <CampaignsTable />
+      <CampaignsTable initialCampaigns={campaigns} />
     </>
   )
 }

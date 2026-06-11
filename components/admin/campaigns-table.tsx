@@ -9,7 +9,8 @@ import {
   ExternalLink,
   AlertCircle,
 } from "lucide-react"
-import { MOCK_CAMPAIGNS, type Campaign } from "@/lib/mock-data"
+import { type Campaign } from "@/lib/mock-data"
+import { deleteCampaign } from "@/lib/actions"
 import {
   Table,
   TableBody,
@@ -40,16 +41,24 @@ function formatDate(iso: string) {
   })
 }
 
-export function CampaignsTable() {
-  const [campaigns, setCampaigns] = useState<Campaign[]>(() => [
-    ...MOCK_CAMPAIGNS,
-  ])
+export function CampaignsTable({
+  initialCampaigns,
+}: {
+  initialCampaigns: Campaign[]
+}) {
+  const [campaigns, setCampaigns] = useState<Campaign[]>(initialCampaigns)
   const [error, setError] = useState<string | null>(null)
 
-  function deleteCampaign(id: string) {
+  async function handleDelete(id: string) {
     setError(null)
-    // Optimistically remove from local state to simulate a successful delete.
+    const previous = campaigns
+    // Optimistically remove, then reconcile with the server result.
     setCampaigns((prev) => prev.filter((c) => c.id !== id))
+    const result = await deleteCampaign(id)
+    if (!result.ok) {
+      setCampaigns(previous)
+      setError(result.error ?? "Could not delete this campaign.")
+    }
   }
 
   if (campaigns.length === 0) {
@@ -146,7 +155,7 @@ export function CampaignsTable() {
                       />
                       <DropdownMenuItem
                         render={
-                          <Link href={`/${c.slug}`} target="_blank">
+                          <Link href={`/campaign/${c.slug}`} target="_blank">
                             <ExternalLink
                               className="size-4"
                               aria-hidden="true"
@@ -158,7 +167,7 @@ export function CampaignsTable() {
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
                         variant="destructive"
-                        onClick={() => deleteCampaign(c.id)}
+                        onClick={() => handleDelete(c.id)}
                       >
                         <Trash2 className="size-4" aria-hidden="true" />
                         Delete

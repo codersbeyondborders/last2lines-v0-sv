@@ -304,6 +304,158 @@ export async function deleteContribution(id: string): Promise<SubmitResult> {
   return { ok: true }
 }
 
+// ----------------------------------------------------------------------------
+// Campaign create / update / delete
+// ----------------------------------------------------------------------------
+
+function slugify(input: string): string {
+  return (
+    input
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 60) || "campaign"
+  )
+}
+
+export interface CampaignInput {
+  title: string
+  tagline: string
+  description: string
+  status: "draft" | "active" | "paused" | "completed"
+  aiModeration: boolean
+  aiLevel: "lenient" | "standard" | "strict"
+  videoLink?: string | null
+  donationLink?: string | null
+}
+
+export interface CampaignResult extends SubmitResult {
+  id?: string
+}
+
+/** Create a new campaign. Generates a unique slug from the title. */
+export async function createCampaign(
+  input: CampaignInput,
+): Promise<CampaignResult> {
+  try {
+    await requireAdmin()
+  } catch {
+    return { ok: false, error: "You must be signed in." }
+  }
+
+  const title = input.title?.trim()
+  if (!title) return { ok: false, error: "Title is required." }
+
+  const id = `cmp_${nanoid(12)}`
+  // Ensure slug uniqueness with a short suffix.
+  const slug = `${slugify(title)}-${nanoid(5).toLowerCase()}`
+
+  try {
+    await query(
+      `INSERT INTO campaigns
+         (id, slug, title, tagline, description, instructions, theme,
+          accent_color, status, ai_moderation, ai_level,
+          background_image_url, campaign_images, video_link, donation_link,
+          start_date, close_date, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
+               now(), now() + interval '30 days', now(), now())`,
+      [
+        id,
+        slug,
+        title,
+        input.tagline?.trim() ?? "",
+        input.description?.trim() ?? "",
+        [],
+        "general",
+        "#1f6f54",
+        input.status,
+        input.aiModeration,
+        input.aiLevel,
+        "/placeholder.svg?height=900&width=1600",
+        [],
+        input.videoLink?.trim() || null,
+        input.donationLink?.trim() || null,
+      ],
+    )
+  } catch (err) {
+    console.log("[v0] createCampaign error:", err)
+    return { ok: false, error: "Could not create this campaign." }
+  }
+
+  revalidatePath("/dashboard/campaigns")
+  revalidatePath("/dashboard")
+  revalidatePath("/")
+  return { ok: true, id }
+}
+
+/** Update an existing campaign's editable fields. */
+export async function updateCampaign(
+  id: string,
+  input: CampaignInput,
+): Promise<CampaignResult> {
+  try {
+    await requireAdmin()
+  } catch {
+    return { ok: false, error: "You must be signed in." }
+  }
+
+  const title = input.title?.trim()
+  if (!title) return { ok: false, error: "Title is required." }
+
+  try {
+    await query(
+      `UPDATE campaigns
+         SET title = $2, tagline = $3, description = $4, status = $5,
+             ai_moderation = $6, ai_level = $7, video_link = $8,
+             donation_link = $9, updated_at = now()
+       WHERE id = $1`,
+      [
+        id,
+        title,
+        input.tagline?.trim() ?? "",
+        input.description?.trim() ?? "",
+        input.status,
+        input.aiModeration,
+        input.aiLevel,
+        input.videoLink?.trim() || null,
+        input.donationLink?.trim() || null,
+      ],
+    )
+  } catch (err) {
+    console.log("[v0] updateCampaign error:", err)
+    return { ok: false, error: "Could not save changes." }
+  }
+
+  revalidatePath("/dashboard/campaigns")
+  revalidatePath("/dashboard")
+  revalidatePath("/")
+  return { ok: true, id }
+}
+
+/** Permanently delete a campaign and its contributions (cascade). */
+export async function deleteCampaign(id: string): Promise<SubmitResult> {
+  try {
+    await requireAdmin()
+  } catch {
+    return { ok: false, error: "You must be signed in." }
+  }
+
+  try {
+    await query(`DELETE FROM contributions WHERE campaign_id = $1`, [id])
+    await query(`DELETE FROM moderation_settings WHERE campaign_id = $1`, [id])
+    await query(`DELETE FROM campaigns WHERE id = $1`, [id])
+  } catch (err) {
+    console.log("[v0] deleteCampaign error:", err)
+    return { ok: false, error: "Could not delete this campaign." }
+  }
+
+  revalidatePath("/dashboard/campaigns")
+  revalidatePath("/dashboard")
+  revalidatePath("/")
+  return { ok: true }
+}
+
 export async function signOut() {
   const supabase = await createClient()
   await supabase.auth.signOut()
