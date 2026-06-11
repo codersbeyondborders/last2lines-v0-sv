@@ -1,0 +1,476 @@
+"use client"
+
+import { useState } from "react"
+import { useRouter } from "next/navigation"
+import {
+  ImagePlus,
+  Plus,
+  Trash2,
+  Loader2,
+  Check,
+  AlertCircle,
+  GripVertical,
+} from "lucide-react"
+import {
+  type Campaign,
+  type CampaignStatus,
+  type ModerationLevel,
+} from "@/lib/mock-data"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Switch } from "@/components/ui/switch"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { cn } from "@/lib/utils"
+
+const STATUS_OPTIONS: { value: CampaignStatus; label: string }[] = [
+  { value: "draft", label: "Draft" },
+  { value: "active", label: "Active" },
+  { value: "paused", label: "Paused" },
+  { value: "completed", label: "Completed" },
+]
+
+const LEVEL_OPTIONS: { value: ModerationLevel; label: string; hint: string }[] =
+  [
+    { value: "lenient", label: "Lenient", hint: "Only blocks clear abuse." },
+    {
+      value: "standard",
+      label: "Standard",
+      hint: "Balances openness and on-theme quality.",
+    },
+    {
+      value: "strict",
+      label: "Strict",
+      hint: "Enforces tight theme relevance.",
+    },
+  ]
+
+interface SeedCouplet {
+  id: string
+  lineOne: string
+  lineTwo: string
+}
+
+export function CampaignForm({ campaign }: { campaign?: Campaign }) {
+  const router = useRouter()
+  const isEdit = Boolean(campaign)
+
+  const [title, setTitle] = useState(campaign?.title ?? "")
+  const [tagline, setTagline] = useState(campaign?.tagline ?? "")
+  const [description, setDescription] = useState(campaign?.description ?? "")
+  const [videoLink, setVideoLink] = useState(campaign?.videoLink ?? "")
+  const [donationLink, setDonationLink] = useState(
+    campaign?.donationLink ?? "",
+  )
+  const [status, setStatus] = useState<CampaignStatus>(
+    campaign?.status === "archived" ? "draft" : (campaign?.status ?? "draft"),
+  )
+  const [aiModeration, setAiModeration] = useState(
+    campaign?.aiModeration ?? true,
+  )
+  const [aiLevel, setAiLevel] = useState<ModerationLevel>(
+    campaign?.aiLevel ?? "standard",
+  )
+  const [seeds, setSeeds] = useState<SeedCouplet[]>([])
+  const [carouselCount, setCarouselCount] = useState(0)
+
+  const [touched, setTouched] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [done, setDone] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const titleError = touched && !title.trim() ? "Title is required." : null
+  const isValid = title.trim().length > 0
+
+  function addSeed() {
+    setSeeds((prev) => [
+      ...prev,
+      { id: `seed_${Date.now()}`, lineOne: "", lineTwo: "" },
+    ])
+  }
+
+  function updateSeed(id: string, patch: Partial<SeedCouplet>) {
+    setSeeds((prev) => prev.map((s) => (s.id === id ? { ...s, ...patch } : s)))
+  }
+
+  function removeSeed(id: string) {
+    setSeeds((prev) => prev.filter((s) => s.id !== id))
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setTouched(true)
+    setError(null)
+    if (!isValid) return
+
+    setSubmitting(true)
+    // Simulate a successful server write, then return to the list.
+    window.setTimeout(() => {
+      setSubmitting(false)
+      setDone(true)
+      window.setTimeout(() => router.push("/dashboard/campaigns"), 700)
+    }, 900)
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+      {error ? (
+        <div
+          role="alert"
+          aria-live="assertive"
+          className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive"
+        >
+          <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+          <span>{error}</span>
+        </div>
+      ) : null}
+
+      {/* Basic Info */}
+      <FormSection
+        title="Basic info"
+        description="The name and story behind this campaign."
+      >
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="title">
+            Title <span className="text-destructive">*</span>
+          </Label>
+          <Input
+            id="title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            onBlur={() => setTouched(true)}
+            aria-invalid={Boolean(titleError)}
+            aria-describedby={titleError ? "title-error" : undefined}
+            placeholder="Two Lines for the Earth"
+            className={cn(titleError && "border-destructive")}
+          />
+          {titleError ? (
+            <p
+              id="title-error"
+              role="alert"
+              aria-live="polite"
+              className="text-sm text-destructive"
+            >
+              {titleError}
+            </p>
+          ) : null}
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="tagline">Tagline</Label>
+          <Input
+            id="tagline"
+            value={tagline}
+            onChange={(e) => setTagline(e.target.value)}
+            placeholder="A living poem written by the world, for the world."
+          />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="description">Description</Label>
+          <Textarea
+            id="description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            rows={4}
+            placeholder="Describe the cause and what contributors are writing toward."
+          />
+        </div>
+      </FormSection>
+
+      {/* Media Uploads */}
+      <FormSection
+        title="Media"
+        description="A background image and carousel images shown on the campaign page."
+      >
+        <div className="flex flex-col gap-2">
+          <Label>Background image</Label>
+          <UploadDropzone label="Upload a background image" />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <Label>Carousel images</Label>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setCarouselCount((n) => n + 1)}
+            >
+              <Plus className="size-4" aria-hidden="true" />
+              Add image
+            </Button>
+          </div>
+          {carouselCount === 0 ? (
+            <UploadDropzone label="Upload carousel images" />
+          ) : (
+            <ul className="flex flex-col gap-2">
+              {Array.from({ length: carouselCount }).map((_, i) => (
+                <li
+                  key={i}
+                  className="flex items-center gap-3 rounded-lg border border-border bg-card px-3 py-2 text-sm"
+                >
+                  <GripVertical
+                    className="size-4 text-muted-foreground"
+                    aria-hidden="true"
+                  />
+                  <span className="flex-1 text-muted-foreground">
+                    Image {i + 1} · drag to set display order
+                  </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    aria-label={`Remove image ${i + 1}`}
+                    onClick={() => setCarouselCount((n) => Math.max(0, n - 1))}
+                  >
+                    <Trash2 className="size-4" aria-hidden="true" />
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </FormSection>
+
+      {/* Links */}
+      <FormSection
+        title="Links"
+        description="Optional video and donation links surfaced on the campaign page."
+      >
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="video">Video link</Label>
+          <Input
+            id="video"
+            type="url"
+            value={videoLink}
+            onChange={(e) => setVideoLink(e.target.value)}
+            placeholder="https://"
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="donation">Donation link</Label>
+          <Input
+            id="donation"
+            type="url"
+            value={donationLink}
+            onChange={(e) => setDonationLink(e.target.value)}
+            placeholder="https://"
+          />
+        </div>
+      </FormSection>
+
+      {/* Configuration */}
+      <FormSection
+        title="Configuration"
+        description="Publication status and how submissions are moderated."
+      >
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="status">Status</Label>
+          <Select
+            value={status}
+            onValueChange={(v) => setStatus(v as CampaignStatus)}
+          >
+            <SelectTrigger id="status" className="w-full sm:w-64">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {STATUS_OPTIONS.map((o) => (
+                <SelectItem key={o.value} value={o.value}>
+                  {o.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex items-start justify-between gap-4 rounded-lg border border-border bg-card px-4 py-3">
+          <div className="flex flex-col gap-0.5">
+            <Label htmlFor="ai-moderation" className="cursor-pointer">
+              AI moderation
+            </Label>
+            <p className="text-sm text-muted-foreground text-pretty">
+              When on, the AI auto-approves on-theme couplets. Turn off to send
+              every submission to the manual queue.
+            </p>
+          </div>
+          <Switch
+            id="ai-moderation"
+            checked={aiModeration}
+            onCheckedChange={(v) => setAiModeration(Boolean(v))}
+          />
+        </div>
+
+        {aiModeration ? (
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="ai-level">AI moderation level</Label>
+            <Select
+              value={aiLevel}
+              onValueChange={(v) => setAiLevel(v as ModerationLevel)}
+            >
+              <SelectTrigger id="ai-level" className="w-full sm:w-64">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {LEVEL_OPTIONS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>
+                    {o.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-sm text-muted-foreground">
+              {LEVEL_OPTIONS.find((o) => o.value === aiLevel)?.hint}
+            </p>
+          </div>
+        ) : null}
+      </FormSection>
+
+      {/* Seed Data */}
+      <FormSection
+        title="Seed couplets"
+        description="Optional opening lines that kickstart the poem before contributions arrive."
+      >
+        {seeds.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            No seed couplets yet.
+          </p>
+        ) : (
+          <ul className="flex flex-col gap-4">
+            {seeds.map((s, i) => (
+              <li
+                key={s.id}
+                className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-muted-foreground">
+                    Couplet {i + 1}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    aria-label={`Remove couplet ${i + 1}`}
+                    onClick={() => removeSeed(s.id)}
+                  >
+                    <Trash2 className="size-4" aria-hidden="true" />
+                  </Button>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor={`${s.id}-1`} className="sr-only">
+                    Couplet {i + 1} line one
+                  </Label>
+                  <Input
+                    id={`${s.id}-1`}
+                    value={s.lineOne}
+                    maxLength={100}
+                    onChange={(e) =>
+                      updateSeed(s.id, { lineOne: e.target.value })
+                    }
+                    placeholder="First line"
+                  />
+                  <Label htmlFor={`${s.id}-2`} className="sr-only">
+                    Couplet {i + 1} line two
+                  </Label>
+                  <Input
+                    id={`${s.id}-2`}
+                    value={s.lineTwo}
+                    maxLength={100}
+                    onChange={(e) =>
+                      updateSeed(s.id, { lineTwo: e.target.value })
+                    }
+                    placeholder="Second line"
+                  />
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+        <div>
+          <Button type="button" variant="outline" size="sm" onClick={addSeed}>
+            <Plus className="size-4" aria-hidden="true" />
+            Add couplet
+          </Button>
+        </div>
+      </FormSection>
+
+      {/* Actions */}
+      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => router.push("/dashboard/campaigns")}
+          disabled={submitting}
+        >
+          Cancel
+        </Button>
+        <Button type="submit" disabled={!isValid || submitting || done}>
+          {submitting ? (
+            <>
+              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+              Saving…
+            </>
+          ) : done ? (
+            <>
+              <Check className="size-4" aria-hidden="true" />
+              Saved
+            </>
+          ) : isEdit ? (
+            "Save changes"
+          ) : (
+            "Create campaign"
+          )}
+        </Button>
+      </div>
+    </form>
+  )
+}
+
+function FormSection({
+  title,
+  description,
+  children,
+}: {
+  title: string
+  description?: string
+  children: React.ReactNode
+}) {
+  return (
+    <Card size="default">
+      <CardContent className="flex flex-col gap-5 p-5 sm:p-6">
+        <div className="flex flex-col gap-1">
+          <h2 className="font-serif text-lg font-semibold tracking-tight">
+            {title}
+          </h2>
+          {description ? (
+            <p className="text-sm text-muted-foreground text-pretty">
+              {description}
+            </p>
+          ) : null}
+        </div>
+        {children}
+      </CardContent>
+    </Card>
+  )
+}
+
+function UploadDropzone({ label }: { label: string }) {
+  return (
+    <button
+      type="button"
+      className="flex w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border bg-muted/30 px-4 py-8 text-sm text-muted-foreground transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+    >
+      <ImagePlus className="size-6" aria-hidden="true" />
+      {label}
+      <span className="text-xs">PNG or JPG, drag and drop or click</span>
+    </button>
+  )
+}

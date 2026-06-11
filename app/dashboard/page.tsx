@@ -1,49 +1,133 @@
-import type { Metadata } from "next"
-import { SiteHeader } from "@/components/site-header"
-import { SiteFooter } from "@/components/site-footer"
-import { ModerationDashboard } from "@/components/moderation-dashboard"
-import { FLAGSHIP_CAMPAIGN } from "@/lib/mock-data"
+import Link from "next/link"
+import {
+  Megaphone,
+  Users,
+  Clock,
+  ShieldCheck,
+  ArrowRight,
+} from "lucide-react"
+import {
+  MOCK_CAMPAIGNS,
+  MOCK_CONTRIBUTIONS,
+  MOCK_AUTHORS,
+} from "@/lib/mock-data"
+import { PageHeader } from "@/components/admin/page-header"
+import { Card, CardContent } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { ContributionStatusBadge } from "@/components/admin/status-badges"
 
-export const metadata: Metadata = {
-  title: "Moderation Dashboard — Last2Lines",
-  description:
-    "Review, approve, and reject contributed couplets before they join the living poem.",
-}
+export default function DashboardOverviewPage() {
+  const pending = MOCK_CONTRIBUTIONS.filter((c) => c.status === "pending")
+  const approved = MOCK_CONTRIBUTIONS.filter((c) => c.status === "approved")
+  const activeCampaigns = MOCK_CAMPAIGNS.filter((c) => c.status === "active")
 
-export default function DashboardPage() {
-  const campaign = FLAGSHIP_CAMPAIGN
+  const stats = [
+    {
+      label: "Active campaigns",
+      value: activeCampaigns.length,
+      sub: `${MOCK_CAMPAIGNS.length} total`,
+      icon: Megaphone,
+    },
+    {
+      label: "Awaiting review",
+      value: pending.length,
+      sub: "needs moderation",
+      icon: Clock,
+    },
+    {
+      label: "In the poem",
+      value: approved.length,
+      sub: "approved couplets",
+      icon: ShieldCheck,
+    },
+    {
+      label: "Authors",
+      value: MOCK_AUTHORS.length,
+      sub: `${MOCK_AUTHORS.filter((a) => a.status === "banned").length} banned`,
+      icon: Users,
+    },
+  ]
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <SiteHeader />
+    <>
+      <PageHeader
+        title="Dashboard"
+        description="An overview of campaign activity and the moderation queue."
+      />
 
-      <main className="flex-1">
-        <section
-          aria-labelledby="dashboard-heading"
-          className="mx-auto w-full max-w-5xl px-6 py-12 sm:py-16"
-        >
-          <header className="mb-8 flex flex-col gap-2">
-            <p className="text-sm font-medium text-muted-foreground">
-              {campaign.title}
-            </p>
-            <h1
-              id="dashboard-heading"
-              className="font-serif text-3xl font-semibold tracking-tight text-balance sm:text-4xl"
-            >
-              Moderation Dashboard
-            </h1>
-            <p className="max-w-2xl leading-relaxed text-muted-foreground text-pretty">
-              Couplets are auto-approved by AI, but you can review, approve, or
-              reject any submission here. Borderline lines below the confidence
-              threshold land in the pending queue.
-            </p>
-          </header>
+      <section aria-label="Key metrics" className="mb-8">
+        <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {stats.map((s) => (
+            <Card key={s.label} size="default">
+              <CardContent className="flex items-center gap-4 p-5">
+                <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-accent text-accent-foreground">
+                  <s.icon className="size-5" aria-hidden="true" />
+                </span>
+                <div className="flex min-w-0 flex-col">
+                  <dt className="truncate text-sm text-muted-foreground">
+                    {s.label}
+                  </dt>
+                  <dd className="font-serif text-2xl font-semibold tabular-nums">
+                    {s.value}
+                  </dd>
+                  <span className="text-xs text-muted-foreground">{s.sub}</span>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </dl>
+      </section>
 
-          <ModerationDashboard />
-        </section>
-      </main>
+      <section aria-labelledby="queue-heading" className="flex flex-col gap-4">
+        <div className="flex items-center justify-between gap-3">
+          <h2
+            id="queue-heading"
+            className="font-serif text-xl font-semibold tracking-tight"
+          >
+            Moderation queue
+          </h2>
+          <Button
+            variant="outline"
+            size="sm"
+            nativeButton={false}
+            render={
+              <Link href="/dashboard/contributions">
+                View all
+                <ArrowRight className="size-4" aria-hidden="true" />
+              </Link>
+            }
+          />
+        </div>
 
-      <SiteFooter />
-    </div>
+        {pending.length === 0 ? (
+          <Card>
+            <CardContent className="p-8 text-center text-muted-foreground">
+              The queue is clear. Every couplet has been reviewed.
+            </CardContent>
+          </Card>
+        ) : (
+          <ul className="flex flex-col gap-3">
+            {pending.map((c) => (
+              <li key={c.id}>
+                <Card size="default">
+                  <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex min-w-0 flex-col gap-1">
+                      <blockquote className="border-l-2 border-primary/40 pl-3 font-serif leading-relaxed text-pretty">
+                        <p className="break-words">{c.lineOne}</p>
+                        <p className="break-words">{c.lineTwo}</p>
+                      </blockquote>
+                      <span className="pl-3 text-xs text-muted-foreground">
+                        {c.authorName ?? "Anonymous"}
+                      </span>
+                    </div>
+                    <ContributionStatusBadge status={c.status} />
+                  </CardContent>
+                </Card>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    </>
   )
 }
