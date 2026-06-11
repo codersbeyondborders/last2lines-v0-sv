@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 import { nanoid } from "nanoid"
 import { query, withConnection } from "@/lib/db"
 import { createClient } from "@/lib/supabase/server"
+import { moderateCouplet } from "@/lib/ai-moderation"
 import type { Contribution } from "@/lib/mock-data"
 
 const VERSE_MAX = 100
@@ -12,6 +13,8 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 export interface SubmitResult {
   ok: boolean
   error?: string
+  /** Resulting moderation status of a public submission, when applicable. */
+  status?: Contribution["status"]
 }
 
 /**
@@ -51,8 +54,15 @@ export async function submitContribution(input: {
     status: string
     start_date: Date
     close_date: Date
+    title: string
+    theme: string
+    description: string
+    ai_moderation: boolean
+    ai_level: "lenient" | "standard" | "strict"
   }>(
-    `SELECT id, slug, status, start_date, close_date FROM campaigns WHERE id = $1`,
+    `SELECT id, slug, status, start_date, close_date, title, theme, description,
+            ai_moderation, ai_level
+       FROM campaigns WHERE id = $1`,
     [input.campaignId],
   )
   const campaign = campaignRows[0]
@@ -65,6 +75,28 @@ export async function submitContribution(input: {
     now <= new Date(campaign.close_date).getTime()
   if (!open)
     return { ok: false, error: "This campaign is not currently accepting submissions." }
+
+  // Run AI auto-moderation (AWS Bedrock via the AI Gateway) when enabled for
+  // this campaign. The model returns approve / reject / review; anything that
+  // isn't a confident approval/rejection stays pending for a human.
+  let initialStatus: Contribution["status"] = "pending"
+  let moderationReason: string | null = null
+  if (campaign.ai_moderation) {
+    const verdict = await moderateCouplet({
+      lineOne,
+      lineTwo,
+      level: campaign.ai_level,
+      campaignTitle: campaign.title,
+      campaignTheme: campaign.theme,
+      campaignDescription: campaign.description,
+    })
+    if (verdict.decision === "approve") {
+      initialStatus = "approved"
+    } else if (verdict.decision === "reject") {
+      initialStatus = "rejected"
+    }
+    moderationReason = `AI (${campaign.ai_level}): ${verdict.reason}`
+  }
 
   try {
     await withConnection(async (client) => {
@@ -87,12 +119,42 @@ export async function submitContribution(input: {
         throw new Error("banned")
       }
 
-      await client.query(
-        `INSERT INTO contributions
-           (id, campaign_id, sequence_number, line_one, line_two, author_id, status)
-         VALUES ($1, $2, 0, $3, $4, $5, 'pending')`,
-        [`ctr_${nanoid(12)}`, input.campaignId, lineOne, lineTwo, author.id],
-      )
+      // Approved submissions get the next sequence number in the poem.
+      if (initialStatus === "approved") {
+        await client.query(
+          `INSERT INTO contributions
+             (id, campaign_id, sequence_number, line_one, line_two, author_id,
+              status, moderation_reason)
+           VALUES ($1, $2,
+             COALESCE((SELECT MAX(sequence_number) FROM contributions
+                        WHERE campaign_id = $2 AND status = 'approved'), 0) + 1,
+             $3, $4, $5, 'approved', $6)`,
+          [
+            `ctr_${nanoid(12)}`,
+            input.campaignId,
+            lineOne,
+            lineTwo,
+            author.id,
+            moderationReason,
+          ],
+        )
+      } else {
+        await client.query(
+          `INSERT INTO contributions
+             (id, campaign_id, sequence_number, line_one, line_two, author_id,
+              status, moderation_reason)
+           VALUES ($1, $2, 0, $3, $4, $5, $6, $7)`,
+          [
+            `ctr_${nanoid(12)}`,
+            input.campaignId,
+            lineOne,
+            lineTwo,
+            author.id,
+            initialStatus,
+            moderationReason,
+          ],
+        )
+      }
     })
   } catch (err) {
     if (err instanceof Error && err.message === "banned") {
@@ -111,7 +173,7 @@ export async function submitContribution(input: {
   revalidatePath(`/campaign/${campaign.slug}`)
   revalidatePath("/dashboard")
   revalidatePath("/dashboard/contributions")
-  return { ok: true }
+  return { ok: true, status: initialStatus }
 }
 
 // ----------------------------------------------------------------------------
