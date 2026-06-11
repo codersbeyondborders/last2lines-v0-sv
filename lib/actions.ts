@@ -76,12 +76,39 @@ export async function submitContribution(input: {
   if (!open)
     return { ok: false, error: "This campaign is not currently accepting submissions." }
 
-  // Run AI auto-moderation (AWS Bedrock via the AI Gateway) when enabled for
-  // this campaign. The model returns approve / reject / review; anything that
-  // isn't a confident approval/rejection stays pending for a human.
+  // Run AI auto-moderation (AWS Bedrock) when enabled for this campaign.
+  //
+  // Decision outcomes:
+  //   publish → approved as submitted
+  //   curate  → approved with AI-rewritten lines
+  //   manual  → pending for a human moderator
+  //
+  // Any AI failure automatically falls back to manual (pending).
   let initialStatus: Contribution["status"] = "pending"
   let moderationReason: string | null = null
+
+  // lineOne/lineTwo may be replaced by AI-curated versions before insert.
+  let finalLineOne = lineOne
+  let finalLineTwo = lineTwo
+
   if (campaign.ai_moderation) {
+    // Fetch the last two approved couplets to give the AI poem context.
+    const { rows: prevRows } = await query<{
+      line_one: string
+      line_two: string
+    }>(
+      `SELECT line_one, line_two
+         FROM contributions
+        WHERE campaign_id = $1 AND status = 'approved'
+        ORDER BY sequence_number DESC
+        LIMIT 2`,
+      [input.campaignId],
+    )
+    // Return them in ascending order so the AI reads them chronologically.
+    const previousCouplets = prevRows
+      .reverse()
+      .map((r) => ({ lineOne: r.line_one, lineTwo: r.line_two }))
+
     const verdict = await moderateCouplet({
       lineOne,
       lineTwo,
@@ -89,13 +116,25 @@ export async function submitContribution(input: {
       campaignTitle: campaign.title,
       campaignTheme: campaign.theme,
       campaignDescription: campaign.description,
+      previousCouplets,
     })
-    if (verdict.decision === "approve") {
+
+    if (verdict.decision === "publish") {
       initialStatus = "approved"
-    } else if (verdict.decision === "reject") {
-      initialStatus = "rejected"
+      moderationReason = `AI (${campaign.ai_level}): ${verdict.reason}`
+    } else if (verdict.decision === "curate") {
+      initialStatus = "approved"
+      // Use the AI-curated lines instead of the raw submission.
+      finalLineOne = verdict.curatedLineOne ?? lineOne
+      finalLineTwo = verdict.curatedLineTwo ?? lineTwo
+      moderationReason = `AI curated (${campaign.ai_level}): ${verdict.reason}`
+    } else {
+      // manual (or fallback) — leave as pending for a human moderator.
+      initialStatus = "pending"
+      moderationReason = verdict.fallback
+        ? `AI unavailable: ${verdict.reason}`
+        : `AI flagged for manual review (${campaign.ai_level}): ${verdict.reason}`
     }
-    moderationReason = `AI (${campaign.ai_level}): ${verdict.reason}`
   }
 
   try {
@@ -119,7 +158,7 @@ export async function submitContribution(input: {
         throw new Error("banned")
       }
 
-      // Approved submissions get the next sequence number in the poem.
+      // Approved submissions (publish or curate) get the next sequence number.
       if (initialStatus === "approved") {
         await client.query(
           `INSERT INTO contributions
@@ -132,13 +171,14 @@ export async function submitContribution(input: {
           [
             `ctr_${nanoid(12)}`,
             input.campaignId,
-            lineOne,
-            lineTwo,
+            finalLineOne,
+            finalLineTwo,
             author.id,
             moderationReason,
           ],
         )
       } else {
+        // pending — queued for manual moderation.
         await client.query(
           `INSERT INTO contributions
              (id, campaign_id, sequence_number, line_one, line_two, author_id,
@@ -147,8 +187,8 @@ export async function submitContribution(input: {
           [
             `ctr_${nanoid(12)}`,
             input.campaignId,
-            lineOne,
-            lineTwo,
+            finalLineOne,
+            finalLineTwo,
             author.id,
             initialStatus,
             moderationReason,
