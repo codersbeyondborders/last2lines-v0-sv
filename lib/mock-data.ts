@@ -429,9 +429,12 @@ export function getCampaignStats(campaign: Campaign): CampaignStats {
 }
 
 export function formatCampaignDate(iso: string): string {
+  // Force UTC so the server (UTC) and client (local TZ) format identically,
+  // avoiding React hydration mismatches.
   return new Date(iso).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
+    timeZone: 'UTC',
   })
 }

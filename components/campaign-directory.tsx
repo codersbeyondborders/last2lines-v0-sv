@@ -3,8 +3,8 @@
 import { useMemo, useState, useId } from "react"
 import { Search, X } from "lucide-react"
 import {
-  MOCK_CAMPAIGNS,
   getCampaignPhase,
+  type Campaign,
   type CampaignPhase,
 } from "@/lib/mock-data"
 import { CampaignCard } from "@/components/campaign-card"
@@ -22,14 +22,14 @@ const FILTERS: { value: FilterValue; label: string }[] = [
   { value: "completed", label: "Completed" },
 ]
 
-export function CampaignDirectory() {
+export function CampaignDirectory({ campaigns }: { campaigns: Campaign[] }) {
   const [query, setQuery] = useState("")
   const [filter, setFilter] = useState<FilterValue>("all")
   const searchId = useId()
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase()
-    return MOCK_CAMPAIGNS.filter((campaign) => {
+    return campaigns.filter((campaign) => {
       const phase = getCampaignPhase(campaign)
       const matchesFilter = filter === "all" || phase === filter
       const matchesQuery =
@@ -38,7 +38,7 @@ export function CampaignDirectory() {
         campaign.description.toLowerCase().includes(q)
       return matchesFilter && matchesQuery
     })
-  }, [query, filter])
+  }, [query, filter, campaigns])
 
   return (
     <section aria-labelledby="directory-heading" className="flex flex-col gap-8">

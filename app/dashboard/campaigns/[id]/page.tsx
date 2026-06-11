@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation"
 import { PageHeader } from "@/components/admin/page-header"
 import { CampaignForm } from "@/components/admin/campaign-form"
-import { MOCK_CAMPAIGNS } from "@/lib/mock-data"
+import { getCampaignById } from "@/lib/queries"
 
 export default async function EditCampaignPage({
   params,
@@ -9,7 +9,7 @@ export default async function EditCampaignPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const campaign = MOCK_CAMPAIGNS.find((c) => c.id === id)
+  const campaign = await getCampaignById(id)
 
   if (!campaign) {
     notFound()

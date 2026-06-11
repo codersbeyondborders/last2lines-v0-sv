@@ -6,44 +6,39 @@ import {
   ShieldCheck,
   ArrowRight,
 } from "lucide-react"
-import {
-  MOCK_CAMPAIGNS,
-  MOCK_CONTRIBUTIONS,
-  MOCK_AUTHORS,
-} from "@/lib/mock-data"
+import { getDashboardSummary, getContributionsByStatus } from "@/lib/queries"
 import { PageHeader } from "@/components/admin/page-header"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ContributionStatusBadge } from "@/components/admin/status-badges"
 
-export default function DashboardOverviewPage() {
-  const pending = MOCK_CONTRIBUTIONS.filter((c) => c.status === "pending")
-  const approved = MOCK_CONTRIBUTIONS.filter((c) => c.status === "approved")
-  const activeCampaigns = MOCK_CAMPAIGNS.filter((c) => c.status === "active")
+export default async function DashboardOverviewPage() {
+  const summary = await getDashboardSummary()
+  const pending = await getContributionsByStatus("pending")
 
   const stats = [
     {
       label: "Active campaigns",
-      value: activeCampaigns.length,
-      sub: `${MOCK_CAMPAIGNS.length} total`,
+      value: summary.activeCampaigns,
+      sub: `${summary.totalCampaigns} total`,
       icon: Megaphone,
     },
     {
       label: "Awaiting review",
-      value: pending.length,
+      value: summary.pendingCount,
       sub: "needs moderation",
       icon: Clock,
     },
     {
       label: "In the poem",
-      value: approved.length,
+      value: summary.approvedCount,
       sub: "approved couplets",
       icon: ShieldCheck,
     },
     {
       label: "Authors",
-      value: MOCK_AUTHORS.length,
-      sub: `${MOCK_AUTHORS.filter((a) => a.status === "banned").length} banned`,
+      value: summary.authorCount,
+      sub: `${summary.bannedCount} banned`,
       icon: Users,
     },
   ]

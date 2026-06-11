@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { ExternalLink, LogOut, Menu, X } from "lucide-react"
 import { AdminSidebarNav } from "./admin-sidebar-nav"
 import { ThemeToggle } from "@/components/theme-toggle"
@@ -15,12 +16,33 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
+import { signOut } from "@/lib/actions"
 
-// Mock admin identity; replaced by the Supabase Auth session in Phase 3.
-const ADMIN = { name: "Wajid Parray", email: "admin@last2lines.org" }
+function nameFromEmail(email: string) {
+  const local = email.split("@")[0] ?? "admin"
+  return local
+    .split(/[._-]+/)
+    .filter(Boolean)
+    .map((p) => p[0]!.toUpperCase() + p.slice(1))
+    .join(" ")
+}
 
-export function AdminShell({ children }: { children: React.ReactNode }) {
+export function AdminShell({
+  children,
+  email,
+}: {
+  children: React.ReactNode
+  email: string
+}) {
   const [mobileOpen, setMobileOpen] = useState(false)
+  const router = useRouter()
+  const admin = { name: nameFromEmail(email), email }
+
+  async function handleSignOut() {
+    await signOut()
+    router.push("/auth/login")
+    router.refresh()
+  }
 
   return (
     <div className="min-h-dvh bg-background">
@@ -98,14 +120,14 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                       aria-hidden="true"
                       className="flex size-7 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground"
                     >
-                      {ADMIN.name
+                      {admin.name
                         .split(" ")
                         .map((p) => p[0])
                         .join("")
                         .slice(0, 2)}
                     </span>
                     <span className="hidden max-w-32 truncate font-medium sm:inline">
-                      {ADMIN.name}
+                      {admin.name}
                     </span>
                   </button>
                 }
@@ -114,10 +136,10 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                 <DropdownMenuLabel>
                   <div className="flex flex-col">
                     <span className="font-medium text-foreground">
-                      {ADMIN.name}
+                      {admin.name}
                     </span>
                     <span className="text-xs text-muted-foreground">
-                      {ADMIN.email}
+                      {admin.email}
                     </span>
                   </div>
                 </DropdownMenuLabel>
@@ -133,7 +155,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                     </Link>
                   }
                 />
-                <DropdownMenuItem variant="destructive">
+                <DropdownMenuItem variant="destructive" onClick={handleSignOut}>
                   <LogOut className="size-4" aria-hidden="true" />
                   Log out
                 </DropdownMenuItem>

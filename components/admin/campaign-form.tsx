@@ -16,6 +16,7 @@ import {
   type CampaignStatus,
   type ModerationLevel,
 } from "@/lib/mock-data"
+import { createCampaign, updateCampaign } from "@/lib/actions"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -105,19 +106,37 @@ export function CampaignForm({ campaign }: { campaign?: Campaign }) {
     setSeeds((prev) => prev.filter((s) => s.id !== id))
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setTouched(true)
     setError(null)
     if (!isValid) return
 
     setSubmitting(true)
-    // Simulate a successful server write, then return to the list.
-    window.setTimeout(() => {
+    const payload = {
+      title: title.trim(),
+      tagline: tagline.trim(),
+      description: description.trim(),
+      status: status as "draft" | "active" | "paused" | "completed",
+      aiModeration,
+      aiLevel,
+      videoLink: videoLink.trim() || null,
+      donationLink: donationLink.trim() || null,
+    }
+    const result =
+      isEdit && campaign
+        ? await updateCampaign(campaign.id, payload)
+        : await createCampaign(payload)
+
+    if (!result.ok) {
       setSubmitting(false)
-      setDone(true)
-      window.setTimeout(() => router.push("/dashboard/campaigns"), 700)
-    }, 900)
+      setError(result.error ?? "Something went wrong. Please try again.")
+      return
+    }
+    setSubmitting(false)
+    setDone(true)
+    router.push("/dashboard/campaigns")
+    router.refresh()
   }
 
   return (

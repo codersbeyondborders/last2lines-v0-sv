@@ -7,17 +7,16 @@ import { CampaignHero } from "@/components/campaign-hero"
 import { CampaignSubmission } from "@/components/campaign-submission"
 import { CampaignPoem } from "@/components/campaign-poem"
 import { Button } from "@/components/ui/button"
+import { getCampaignPhase, formatCampaignDate } from "@/lib/mock-data"
 import {
-  MOCK_CAMPAIGNS,
+  getCampaigns,
   getCampaignBySlug,
-  getCampaignPhase,
-  getCampaignStats,
   getApprovedContributions,
-  formatCampaignDate,
-} from "@/lib/mock-data"
+} from "@/lib/queries"
 
-export function generateStaticParams() {
-  return MOCK_CAMPAIGNS.map((c) => ({ slug: c.slug }))
+export async function generateStaticParams() {
+  const campaigns = await getCampaigns()
+  return campaigns.map((c) => ({ slug: c.slug }))
 }
 
 export async function generateMetadata({
@@ -26,7 +25,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>
 }) {
   const { slug } = await params
-  const campaign = getCampaignBySlug(slug)
+  const campaign = await getCampaignBySlug(slug)
   if (!campaign) return { title: "Campaign not found — Last2Lines" }
   return {
     title: `${campaign.title} — Last2Lines`,
@@ -40,12 +39,19 @@ export default async function CampaignPage({
   params: Promise<{ slug: string }>
 }) {
   const { slug } = await params
-  const campaign = getCampaignBySlug(slug)
+  const campaign = await getCampaignBySlug(slug)
   if (!campaign) notFound()
 
   const phase = getCampaignPhase(campaign)
-  const stats = getCampaignStats(campaign)
-  const couplets = getApprovedContributions(campaign.id)
+  const couplets = await getApprovedContributions(campaign.id)
+  const contributors = new Set(
+    couplets.map((c) => c.authorName?.trim() || c.authorId),
+  ).size
+  const stats = {
+    contributors: Math.max(contributors, couplets.length > 0 ? 1 : 0),
+    couplets: couplets.length,
+    lines: couplets.length * 2,
+  }
 
   const statItems = [
     { label: "Voice", value: "1" },
