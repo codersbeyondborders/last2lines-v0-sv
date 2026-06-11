@@ -41,6 +41,9 @@ Last2Lines lets anyone add a **couplet (exactly two lines)** to an active campai
 **contributions** (the couplets)
 - `id`, `campaign_id` (FK), `line_one`, `line_two`, `author_name` (optional/anonymous), `country` (optional), `status` (pending/approved/rejected), `moderation_reason`, `created_at`
 
+**moderation_settings** (dashboard-controlled, per campaign)
+- `id`, `campaign_id` (FK), `level` (lenient/balanced/strict), `profanity_filter` (bool), `enforce_theme` (bool), `confidence_threshold` (0–1), `updated_at`
+
 **moderation_log** (optional audit)
 - `id`, `contribution_id`, `model`, `result`, `latency_ms`, `created_at`
 
@@ -72,9 +75,12 @@ Last2Lines lets anyone add a **couplet (exactly two lines)** to an active campai
 - Server actions / route handlers for: fetch approved tapestry, submit contribution (pending), fetch moderation queue, approve/reject
 - Replace mock arrays with real queries; keep per-query scoping/validation
 
-### Phase 4 — AI Moderation Guardrails
+### Phase 4 — AI Moderation Guardrails (auto-approve + customizable strictness)
 - AI Gateway interceptor on submission: enforce 2-line semantics, profanity filter, campaign thematic relevance
-- Auto-set status (approved / pending / rejected) with stored reason + latency
+- **AI auto-approves by default** — clean, on-theme couplets go straight to the tapestry without human review
+- **Customizable moderation level from the Dashboard** — moderators set strictness (e.g. Lenient / Balanced / Strict) plus toggles (profanity filter, theme-relevance enforcement, confidence threshold). These settings drive the AI decision boundary.
+- Auto-set status (approved / pending / rejected) with stored reason + latency; borderline items below the confidence threshold fall back to the manual queue
+- Persist moderation settings per campaign (`moderation_settings` table) so the dashboard controls real behavior
 - Graceful fallback to manual moderation queue on AI failure/timeout
 
 ### Phase 5 — Multi-Campaign / Reskin Support
@@ -94,10 +100,10 @@ Last2Lines lets anyone add a **couplet (exactly two lines)** to an active campai
 **Confirmed**
 1. **Database**: Amazon Aurora PostgreSQL.
 2. **AI moderation**: Vercel AI Gateway (no direct OpenAI key).
+3. **Moderation default**: AI **auto-approves**; moderation strictness/level is **customizable from the Dashboard** (persisted per campaign).
 
 **Still open**
-3. **Auth**: Anonymous contributions only, or accounts for contributors/moderators?
-4. **Moderation default**: AI auto-approve, or always route to a human queue first?
+4. **Auth**: Anonymous contributions only, or accounts for contributors/moderators?
 
 ---
 
