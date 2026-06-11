@@ -1,8 +1,11 @@
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { CampaignDirectory } from "@/components/campaign-directory"
+import { getCampaigns } from "@/lib/queries"
 
-export default function Home() {
+export default async function Home() {
+  const campaigns = await getCampaigns()
+
   return (
     <div className="flex min-h-screen flex-col">
       <SiteHeader />
@@ -32,7 +35,7 @@ export default function Home() {
 
         {/* Campaign directory */}
         <div className="mx-auto w-full max-w-6xl px-6 py-12 sm:py-16">
-          <CampaignDirectory />
+          <CampaignDirectory campaigns={campaigns} />
         </div>
       </main>
 

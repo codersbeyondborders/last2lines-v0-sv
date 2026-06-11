@@ -19,6 +19,7 @@ import {
   type Campaign,
   type CampaignPhase,
 } from "@/lib/mock-data"
+import { submitContribution } from "@/lib/actions"
 
 const VERSE_MAX = 100
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -140,9 +141,25 @@ function ActiveForm({ campaign }: { campaign: Campaign }) {
     setStatus("submitting")
     setServerError(null)
 
-    // Phase 1: simulate the server + AI moderation round-trip with mock data.
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1200))
+      const result = await submitContribution({
+        campaignId: campaign.id,
+        fullName: fullName.trim(),
+        email: email.trim(),
+        lineOne: verseOne.trim(),
+        lineTwo: verseTwo.trim(),
+        consent,
+      })
+
+      if (!result.ok) {
+        setStatus("error")
+        setServerError(
+          result.error ??
+            "Something went wrong while weaving your lines. Please try again.",
+        )
+        return
+      }
+
       setStatus("success")
       setFullName("")
       setEmail("")
