@@ -1,4 +1,5 @@
 import Link from "next/link"
+import Image from "next/image"
 import { ArrowUpRight, CalendarDays } from "lucide-react"
 import {
   formatCampaignDate,
@@ -32,11 +33,12 @@ export function CampaignCard({ campaign }: { campaign: Campaign }) {
   return (
     <article className="group relative flex w-full flex-col overflow-hidden rounded-2xl border border-border/70 bg-card transition-colors hover:border-border focus-within:border-primary">
       <div className="relative aspect-[16/10] overflow-hidden bg-muted">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
+        <Image
           src={campaign.backgroundImageUrl || "/placeholder.svg"}
           alt=""
-          className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
+          fill
+          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+          className="object-cover transition-transform duration-500 group-hover:scale-105"
           loading="lazy"
         />
         <span

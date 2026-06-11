@@ -320,18 +320,9 @@ function ActiveForm({ campaign }: { campaign: Campaign }) {
                   setConsent(Boolean(checked))
                   setTouched((t) => ({ ...t, consent: true }))
                 }}
-                className="mt-0.5"
+                className="mt-0.5 shrink-0"
               />
-              <Label
-                htmlFor="consent"
-                className="text-sm leading-relaxed text-muted-foreground font-normal"
-              >
-                I accept the Terms &amp; Conditions and consent to an{" "}
-                <span className="font-medium text-foreground">
-                  AI automated moderation check
-                </span>{" "}
-                of my submission.
-              </Label>
+              <label htmlFor="consent" className="text-sm text-muted-foreground leading-relaxed cursor-pointer">I acknowledge and accept the <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-foreground underline underline-offset-4 hover:text-primary transition-colors">Terms and Conditions.</a> and I willingly entrust AI moderation for my poetic contribution.</label>
             </div>
             <FieldError id="consent-error" message={showError("consent")} />
           </div>

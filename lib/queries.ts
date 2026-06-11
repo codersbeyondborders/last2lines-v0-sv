@@ -248,6 +248,76 @@ export async function getModerationSettings(
 }
 
 // ----------------------------------------------------------------------------
+// Homepage stats
+// ----------------------------------------------------------------------------
+
+export interface CampaignStatRow {
+  id: string
+  title: string
+  slug: string
+  status: string
+  authors: number
+  lines: number
+}
+
+export interface HomepageStats {
+  totalCampaigns: number
+  totalAuthors: number
+  totalLines: number
+  campaigns: CampaignStatRow[]
+}
+
+export async function getHomepageStats(): Promise<HomepageStats> {
+  const { rows: agg } = await query<{
+    total_campaigns: string
+    total_authors: string
+    total_lines: string
+  }>(`
+    SELECT
+      (SELECT count(*) FROM campaigns WHERE status != 'draft') AS total_campaigns,
+      (SELECT count(*) FROM authors WHERE status = 'active') AS total_authors,
+      (SELECT count(*) * 2 FROM contributions WHERE status = 'approved') AS total_lines
+  `)
+
+  const { rows: campRows } = await query<{
+    id: string
+    title: string
+    slug: string
+    status: string
+    authors: string
+    lines: string
+  }>(`
+    SELECT
+      c.id,
+      c.title,
+      c.slug,
+      c.status,
+      COUNT(DISTINCT ct.author_id) AS authors,
+      COUNT(ct.id) * 2 AS lines
+    FROM campaigns c
+    LEFT JOIN contributions ct ON ct.campaign_id = c.id AND ct.status = 'approved'
+    WHERE c.status != 'draft'
+    GROUP BY c.id
+    ORDER BY c.created_at DESC
+  `)
+
+  const r = agg[0]
+  return {
+    totalCampaigns: Number(r.total_campaigns),
+    totalAuthors: Number(r.total_authors),
+    totalLines: Number(r.total_lines),
+    campaigns: campRows.map((row) => ({
+      id: row.id,
+      title: row.title,
+      slug: row.slug,
+      status: row.status,
+      authors: Number(row.authors),
+      lines: Number(row.lines),
+    })),
+  }
+}
+
+// ----------------------------------------------------------------------------
 // Dashboard aggregate
 // ----------------------------------------------------------------------------
 

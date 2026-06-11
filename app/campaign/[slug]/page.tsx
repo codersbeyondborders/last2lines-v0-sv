@@ -98,12 +98,23 @@ export default async function CampaignPage({
         >
           <div className="mx-auto grid w-full max-w-5xl gap-10 px-4 py-12 sm:px-6 lg:grid-cols-[1.4fr_1fr]">
             <article>
-              <h2
+              <h3
                 id="about-heading"
-                className="font-serif text-2xl font-semibold text-balance sm:text-3xl"
+                className="font-serif text-lg font-semibold"
               >
                 About this campaign
-              </h2>
+              </h3>
+
+              
+
+              <p className="mt-4 text-xs text-muted-foreground">
+                {phase === "upcoming"
+                  ? `Opens ${formatCampaignDate(campaign.startDate)}`
+                  : phase === "completed"
+                    ? `Closed ${formatCampaignDate(campaign.closeDate)}`
+                    : `Open until ${formatCampaignDate(campaign.closeDate)}`}
+              </p>
+
               <p className="mt-4 leading-relaxed text-muted-foreground text-pretty">
                 {campaign.description}
               </p>
@@ -142,6 +153,7 @@ export default async function CampaignPage({
                   />
                 )}
               </div>
+              
             </article>
 
             <aside aria-labelledby="how-heading">
@@ -166,14 +178,46 @@ export default async function CampaignPage({
                   </li>
                 ))}
               </ol>
-              <p className="mt-6 text-xs text-muted-foreground">
-                {phase === "upcoming"
-                  ? `Opens ${formatCampaignDate(campaign.startDate)}`
-                  : phase === "completed"
-                    ? `Closed ${formatCampaignDate(campaign.closeDate)}`
-                    : `Open until ${formatCampaignDate(campaign.closeDate)}`}
-              </p>
+
+              <div className="mt-4 flex flex-wrap gap-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  nativeButton={false}
+                  render={<a href="#poem">Read the poem</a>}
+                />
+                <Button
+                  size="sm"
+                  nativeButton={false}
+                  render={<a href="#contribute">Write your two lines</a>}
+                />
+              </div>
+
+              
             </aside>
+          </div>
+        </section>
+
+        {/* Living poem */}
+        <section
+          id="poem"
+          aria-labelledby="poem-heading"
+          className="scroll-mt-20 border-b border-border"
+        >
+          <div className="mx-auto w-full max-w-3xl px-4 py-12 sm:px-6 sm:py-16">
+            <div className="mb-8 text-center">
+              <h2
+                id="poem-heading"
+                className="font-serif text-2xl font-semibold text-balance sm:text-3xl"
+              >
+                {campaign.title}
+              </h2>
+              <p className="mt-3 leading-relaxed text-muted-foreground text-pretty">
+                {stats.couplets.toLocaleString()} couplets, stitched into one
+                continuous voice.
+              </p>
+            </div>
+            <CampaignPoem couplets={couplets} />
           </div>
         </section>
 
@@ -196,29 +240,6 @@ export default async function CampaignPage({
               </p>
             </div>
             <CampaignSubmission campaign={campaign} phase={phase} />
-          </div>
-        </section>
-
-        {/* Living poem */}
-        <section
-          id="poem"
-          aria-labelledby="poem-heading"
-          className="scroll-mt-20"
-        >
-          <div className="mx-auto w-full max-w-3xl px-4 py-12 sm:px-6 sm:py-16">
-            <div className="mb-8 text-center">
-              <h2
-                id="poem-heading"
-                className="font-serif text-2xl font-semibold text-balance sm:text-3xl"
-              >
-                The Living Poem
-              </h2>
-              <p className="mt-3 leading-relaxed text-muted-foreground text-pretty">
-                {stats.couplets.toLocaleString()} couplets, stitched into one
-                continuous voice.
-              </p>
-            </div>
-            <CampaignPoem couplets={couplets} />
           </div>
         </section>
       </main>

@@ -1,5 +1,4 @@
 import Link from 'next/link'
-import { Feather } from 'lucide-react'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { Button } from '@/components/ui/button'
 
@@ -11,7 +10,6 @@ export function SiteHeader() {
           href="/"
           className="flex items-center gap-2 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
-
           <span className="font-sans text-lg font-semibold tracking-tight">
             Last || Lines
           </span>
@@ -25,25 +23,19 @@ export function SiteHeader() {
             href="/"
             className="rounded-md px-3 py-2 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            Campaigns
+            Home
           </Link>
-          <Link
-            href="/#campaigns"
+          <a
+            href="#campaigns"
             className="rounded-md px-3 py-2 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            Browse
-          </Link>
+            Campaigns
+          </a>
           <Link
             href="/about"
             className="rounded-md px-3 py-2 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             About
-          </Link>
-          <Link
-            href="/dashboard"
-            className="rounded-md px-3 py-2 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            Dashboard
           </Link>
         </nav>
 

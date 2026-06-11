@@ -46,6 +46,20 @@ export function CampaignDirectory({ campaigns }: { campaigns: Campaign[] }) {
         Browse campaigns
       </h2>
 
+      {/* Title + subtitle */}
+      <div className="flex flex-col gap-1.5 mx-auto text-center">
+        <p className="text-xs font-semibold tracking-widest text-primary uppercase">
+          Campaigns
+        </p>
+        <h2 className="font-serif text-4xl font-semibold tracking-tight text-balance leading-tight sm:text-5xl">
+          Causes worth two lines.
+        </h2>
+        <p className="mt-1 max-w-xl text-base leading-relaxed text-muted-foreground">
+          Every campaign is a living poem, built one couplet at a time. Find a
+          cause that moves you and add your voice.
+        </p>
+      </div>
+
       {/* Search + filters */}
       <div className="flex flex-col gap-4">
         <div className="relative">
