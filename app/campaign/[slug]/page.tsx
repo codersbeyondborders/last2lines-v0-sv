@@ -9,15 +9,13 @@ import { CampaignPoem } from "@/components/campaign-poem"
 import { Button } from "@/components/ui/button"
 import { getCampaignPhase, formatCampaignDate } from "@/lib/mock-data"
 import {
-  getCampaigns,
   getCampaignBySlug,
   getApprovedContributions,
 } from "@/lib/queries"
 
-export async function generateStaticParams() {
-  const campaigns = await getCampaigns()
-  return campaigns.map((c) => ({ slug: c.slug }))
-}
+// Campaign content is live and DB-backed, so render on demand rather than
+// prerendering (the database is not reachable at build time).
+export const dynamic = "force-dynamic"
 
 export async function generateMetadata({
   params,
