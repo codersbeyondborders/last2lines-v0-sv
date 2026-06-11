@@ -162,6 +162,16 @@ export const MOCK_MODERATION_SETTINGS: ModerationSettings = {
   updatedAt: '2026-06-09T10:00:00.000Z',
 }
 
-export const APPROVED_COUNT = MOCK_CONTRIBUTIONS.filter(
+export const APPROVED_CONTRIBUTIONS = MOCK_CONTRIBUTIONS.filter(
   (c) => c.status === 'approved',
-).length
+)
+
+export const APPROVED_COUNT = APPROVED_CONTRIBUTIONS.length
+
+// Each approved couplet contributes 2 lines to the living poem.
+export const LINE_COUNT = APPROVED_COUNT * 2
+
+// Distinct authors (anonymous contributions counted once collectively).
+export const AUTHOR_COUNT = new Set(
+  APPROVED_CONTRIBUTIONS.map((c) => c.authorName?.trim() || 'anonymous'),
+).size
