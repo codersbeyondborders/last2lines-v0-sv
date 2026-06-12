@@ -31,8 +31,6 @@ export interface Campaign {
   contributionCount: number
   /** Primary hero/background image. */
   backgroundImageUrl: string
-  /** Optional additional images for the hero carousel. */
-  campaignImages: string[]
   videoLink: string | null
   donationLink: string | null
   startDate: string
@@ -97,11 +95,6 @@ export const MOCK_CAMPAIGNS: Campaign[] = [
     contributionCount: 8,
     backgroundImageUrl:
       '/placeholder.svg?height=600&width=960&query=lush%20green%20forest%20canopy%20from%20above%20with%20misty%20morning%20light',
-    campaignImages: [
-      '/placeholder.svg?height=600&width=960&query=lush%20green%20forest%20canopy%20from%20above%20with%20misty%20morning%20light',
-      '/placeholder.svg?height=600&width=960&query=dramatic%20melting%20glacier%20with%20deep%20blue%20ice',
-      '/placeholder.svg?height=600&width=960&query=calm%20ocean%20horizon%20at%20golden%20hour',
-    ],
     videoLink: 'https://example.com/earth-intro',
     donationLink: 'https://example.com/donate/earth',
     startDate: '2026-05-01T00:00:00.000Z',
@@ -129,9 +122,6 @@ export const MOCK_CAMPAIGNS: Campaign[] = [
     contributionCount: 0,
     backgroundImageUrl:
       '/placeholder.svg?height=600&width=960&query=winding%20river%20through%20a%20green%20valley%20at%20dawn',
-    campaignImages: [
-      '/placeholder.svg?height=600&width=960&query=winding%20river%20through%20a%20green%20valley%20at%20dawn',
-    ],
     videoLink: null,
     donationLink: 'https://example.com/donate/water',
     startDate: '2026-07-15T00:00:00.000Z',
@@ -159,9 +149,6 @@ export const MOCK_CAMPAIGNS: Campaign[] = [
     contributionCount: 142,
     backgroundImageUrl:
       '/placeholder.svg?height=600&width=960&query=ancient%20tall%20forest%20trees%20with%20sunlight%20streaming%20through',
-    campaignImages: [
-      '/placeholder.svg?height=600&width=960&query=ancient%20tall%20forest%20trees%20with%20sunlight%20streaming%20through',
-    ],
     videoLink: 'https://example.com/canopy',
     donationLink: null,
     startDate: '2025-09-01T00:00:00.000Z',
