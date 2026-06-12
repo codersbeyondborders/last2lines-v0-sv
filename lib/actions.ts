@@ -635,21 +635,12 @@ export async function updateCampaign(
   if (!title) return { ok: false, error: "Title is required." }
 
   try {
-    // First, get the current campaign to preserve fields not in the form
-    const currentResult = await query<any>(
-      `SELECT * FROM campaigns WHERE id = $1`,
-      [id],
-    )
-    const current = currentResult.rows[0]
-    if (!current) return { ok: false, error: "Campaign not found." }
-
     await query(
       `UPDATE campaigns
          SET title = $2, tagline = $3, description = $4, status = $5,
              ai_moderation = $6, ai_level = $7, video_link = $8,
              donation_link = $9, background_image_url = $10,
              require_email_verification = $11, auto_email_on_publish = $12,
-             theme = $13, accent_color = $14, instructions = $15, campaign_images = $16,
              updated_at = now()
        WHERE id = $1`,
       [
@@ -665,10 +656,6 @@ export async function updateCampaign(
         input.backgroundImageUrl?.trim() || null,
         input.requireEmailVerification,
         input.autoEmailOnPublish,
-        current.theme,
-        current.accent_color,
-        current.instructions,
-        current.campaign_images,
       ],
     )
   } catch (err) {
