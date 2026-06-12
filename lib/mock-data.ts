@@ -36,6 +36,10 @@ export interface Campaign {
   startDate: string
   closeDate: string
   createdAt: string
+  /** When true, contributors must verify their email before submission. */
+  requireEmailVerification: boolean
+  /** When true, auto-send confirmation email when couplet is published. */
+  autoEmailOnPublish: boolean
 }
 
 export interface Contribution {

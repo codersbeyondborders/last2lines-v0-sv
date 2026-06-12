@@ -82,6 +82,12 @@ export function CampaignForm({ campaign }: { campaign?: Campaign }) {
   const [aiLevel, setAiLevel] = useState<ModerationLevel>(
     campaign?.aiLevel ?? "standard",
   )
+  const [requireEmailVerification, setRequireEmailVerification] = useState(
+    campaign?.requireEmailVerification ?? false,
+  )
+  const [autoEmailOnPublish, setAutoEmailOnPublish] = useState(
+    campaign?.autoEmailOnPublish ?? false,
+  )
   const [seeds, setSeeds] = useState<SeedCouplet[]>([])
 
   const [touched, setTouched] = useState(false)
@@ -124,6 +130,8 @@ export function CampaignForm({ campaign }: { campaign?: Campaign }) {
       aiLevel,
       videoLink: videoLink.trim() || null,
       donationLink: donationLink.trim() || null,
+      requireEmailVerification,
+      autoEmailOnPublish,
     }
     const result =
       isEdit && campaign
@@ -312,6 +320,44 @@ export function CampaignForm({ campaign }: { campaign?: Campaign }) {
             </p>
           </div>
         ) : null}
+      </FormSection>
+
+      {/* Email Settings */}
+      <FormSection
+        title="Email settings"
+        description="Configure how email is handled for contributions."
+      >
+        <div className="flex items-start justify-between gap-4 rounded-lg border border-border bg-card px-4 py-3">
+          <div className="flex flex-col gap-0.5">
+            <Label htmlFor="email-verification" className="cursor-pointer">
+              Require email verification
+            </Label>
+            <p className="text-sm text-muted-foreground text-pretty">
+              Contributors must verify their email address before their couplet is submitted.
+            </p>
+          </div>
+          <Switch
+            id="email-verification"
+            checked={requireEmailVerification}
+            onCheckedChange={(v) => setRequireEmailVerification(Boolean(v))}
+          />
+        </div>
+
+        <div className="flex items-start justify-between gap-4 rounded-lg border border-border bg-card px-4 py-3">
+          <div className="flex flex-col gap-0.5">
+            <Label htmlFor="auto-email" className="cursor-pointer">
+              Auto-send emails on publish
+            </Label>
+            <p className="text-sm text-muted-foreground text-pretty">
+              When a couplet is approved and published, automatically send a confirmation email to the contributor.
+            </p>
+          </div>
+          <Switch
+            id="auto-email"
+            checked={autoEmailOnPublish}
+            onCheckedChange={(v) => setAutoEmailOnPublish(Boolean(v))}
+          />
+        </div>
       </FormSection>
 
       {/* Seed Data */}

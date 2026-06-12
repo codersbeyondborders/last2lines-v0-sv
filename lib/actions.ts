@@ -59,9 +59,10 @@ export async function submitContribution(input: {
     description: string
     ai_moderation: boolean
     ai_level: "lenient" | "standard" | "strict"
+    require_email_verification: boolean
   }>(
     `SELECT id, slug, status, start_date, close_date, title, theme, description,
-            ai_moderation, ai_level
+            ai_moderation, ai_level, require_email_verification
        FROM campaigns WHERE id = $1`,
     [input.campaignId],
   )
@@ -158,16 +159,22 @@ export async function submitContribution(input: {
         throw new Error("banned")
       }
 
+      // If email verification is required, insert as pending (unverified).
+      // Otherwise follow the AI moderation decision.
+      const statusForDb = campaign.require_email_verification
+        ? "pending"
+        : initialStatus
+
       // Approved submissions (publish or curate) get the next sequence number.
-      if (initialStatus === "approved") {
+      if (statusForDb === "approved") {
         await client.query(
           `INSERT INTO contributions
              (id, campaign_id, sequence_number, line_one, line_two, author_id,
-              status, moderation_reason)
+              status, moderation_reason, email_verified)
            VALUES ($1, $2,
              COALESCE((SELECT MAX(sequence_number) FROM contributions
                         WHERE campaign_id = $2 AND status = 'approved'), 0) + 1,
-             $3, $4, $5, 'approved', $6)`,
+             $3, $4, $5, 'approved', $6, $7)`,
           [
             `ctr_${nanoid(12)}`,
             input.campaignId,
@@ -175,23 +182,25 @@ export async function submitContribution(input: {
             finalLineTwo,
             author.id,
             moderationReason,
+            !campaign.require_email_verification, // Set to true if no verification required
           ],
         )
       } else {
-        // pending — queued for manual moderation.
+        // pending — queued for manual moderation or email verification.
         await client.query(
           `INSERT INTO contributions
              (id, campaign_id, sequence_number, line_one, line_two, author_id,
-              status, moderation_reason)
-           VALUES ($1, $2, 0, $3, $4, $5, $6, $7)`,
+              status, moderation_reason, email_verified)
+           VALUES ($1, $2, 0, $3, $4, $5, $6, $7, $8)`,
           [
             `ctr_${nanoid(12)}`,
             input.campaignId,
             finalLineOne,
             finalLineTwo,
             author.id,
-            initialStatus,
+            statusForDb,
             moderationReason,
+            false,
           ],
         )
       }
@@ -207,6 +216,26 @@ export async function submitContribution(input: {
     return {
       ok: false,
       error: "Something went wrong while saving your lines. Please try again.",
+    }
+  }
+
+  // Send verification email if required
+  if (campaign.require_email_verification) {
+    try {
+      await fetch(
+        `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/send-verification-email`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            campaignId: input.campaignId,
+            email,
+            campaignTitle: campaign.title,
+          }),
+        },
+      )
+    } catch (err) {
+      console.log("[v0] Failed to send verification email:", err)
     }
   }
 
@@ -246,12 +275,35 @@ export async function moderateContribution(input: {
 
   try {
     await withConnection(async (client) => {
-      const { rows } = await client.query<{ campaign_id: string }>(
-        `SELECT campaign_id FROM contributions WHERE id = $1`,
+      const { rows } = await client.query<{
+        campaign_id: string
+        author_id: string
+      }>(
+        `SELECT campaign_id, author_id FROM contributions WHERE id = $1`,
         [input.id],
       )
-      const campaignId = rows[0]?.campaign_id
-      if (!campaignId) throw new Error("not found")
+      const contribution = rows[0]
+      if (!contribution) throw new Error("not found")
+
+      // Get campaign info for email sending
+      const { rows: campaignRows } = await client.query<{
+        slug: string
+        title: string
+        auto_email_on_publish: boolean
+      }>(
+        `SELECT slug, title, auto_email_on_publish FROM campaigns WHERE id = $1`,
+        [contribution.campaign_id],
+      )
+      const campaign = campaignRows[0]
+
+      // Get author email for sending publish confirmation
+      const { rows: authorRows } = await client.query<{
+        email: string
+      }>(
+        `SELECT email FROM authors WHERE id = $1`,
+        [contribution.author_id],
+      )
+      const author = authorRows[0]
 
       if (input.status === "approved") {
         // Assign the next sequence number for this campaign's poem.
@@ -263,8 +315,22 @@ export async function moderateContribution(input: {
                    (SELECT MAX(sequence_number) FROM contributions
                      WHERE campaign_id = $3 AND status = 'approved'), 0) + 1
            WHERE id = $1`,
-          [input.id, input.reason ?? null, campaignId],
+          [input.id, input.reason ?? null, contribution.campaign_id],
         )
+
+        // Send publish confirmation email if auto_email_on_publish is enabled
+        if (campaign?.auto_email_on_publish && author?.email) {
+          try {
+            await sendPublishConfirmationEmail({
+              contributionId: input.id,
+              authorEmail: author.email,
+              campaignTitle: campaign.title,
+              campaignSlug: campaign.slug,
+            })
+          } catch (err) {
+            console.log("[v0] Failed to send publish email:", err)
+          }
+        }
       } else {
         // Rejecting or requeuing drops it out of the ordered poem.
         await client.query(
@@ -406,6 +472,76 @@ export async function deleteContribution(id: string): Promise<SubmitResult> {
   return { ok: true }
 }
 
+/**
+ * Send a publish confirmation email to a contributor.
+ * Called when an approved couplet is published or when auto_email_on_publish is enabled.
+ */
+export async function sendPublishConfirmationEmail(input: {
+  contributionId: string
+  authorEmail: string
+  campaignTitle: string
+  campaignSlug: string
+}): Promise<SubmitResult> {
+  try {
+    await requireAdmin()
+  } catch {
+    return { ok: false, error: "You must be signed in." }
+  }
+
+  const RESEND_API_KEY = process.env.RESEND_API_KEY
+
+  if (!RESEND_API_KEY) {
+    return { ok: false, error: "Email service not configured" }
+  }
+
+  try {
+    const campaignUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/campaign/${input.campaignSlug}`
+
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${RESEND_API_KEY}`,
+      },
+      body: JSON.stringify({
+        from: "noreply@last2lines.org",
+        to: input.authorEmail,
+        subject: `Your lines are now in the poem: "${input.campaignTitle}"`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2>Your Lines Are Published!</h2>
+            <p>Congratulations! Your couplet has been approved and is now part of the living poem in <strong>${input.campaignTitle}</strong>.</p>
+            <p>
+              <a href="${campaignUrl}" style="display: inline-block; padding: 12px 24px; background-color: #1f6f54; color: white; text-decoration: none; border-radius: 4px; margin: 16px 0;">
+                Read the Poem
+              </a>
+            </p>
+            <p style="color: #999; font-size: 12px; margin-top: 24px;">
+              Thank you for contributing to this collective work of poetry.
+            </p>
+          </div>
+        `,
+      }),
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      console.error("[v0] Resend API error:", error)
+      return { ok: false, error: "Failed to send confirmation email" }
+    }
+
+    // Update the publish_email_sent_at timestamp
+    await query(
+      `UPDATE contributions SET publish_email_sent_at = now() WHERE id = $1`,
+      [input.contributionId],
+    )
+
+    return { ok: true }
+  } catch (error) {
+    console.error("[v0] Send publish confirmation email error:", error)
+    return { ok: false, error: "Failed to send confirmation email" }
+  }
+
 // ----------------------------------------------------------------------------
 // Campaign create / update / delete
 // ----------------------------------------------------------------------------
@@ -425,11 +561,14 @@ export interface CampaignInput {
   title: string
   tagline: string
   description: string
+  backgroundImageUrl?: string | null
   status: "draft" | "active" | "paused" | "completed"
   aiModeration: boolean
   aiLevel: "lenient" | "standard" | "strict"
   videoLink?: string | null
   donationLink?: string | null
+  requireEmailVerification: boolean
+  autoEmailOnPublish: boolean
 }
 
 export interface CampaignResult extends SubmitResult {
@@ -459,9 +598,10 @@ export async function createCampaign(
          (id, slug, title, tagline, description, instructions, theme,
           accent_color, status, ai_moderation, ai_level,
           background_image_url, campaign_images, video_link, donation_link,
+          require_email_verification, auto_email_on_publish,
           start_date, close_date, created_at, updated_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
-               now(), now() + interval '30 days', now(), now())`,
+               $16, $17, now(), now() + interval '30 days', now(), now())`,
       [
         id,
         slug,
@@ -474,10 +614,12 @@ export async function createCampaign(
         input.status,
         input.aiModeration,
         input.aiLevel,
-        "/placeholder.svg?height=900&width=1600",
+        input.backgroundImageUrl?.trim() || "/placeholder.svg?height=900&width=1600",
         [],
         input.videoLink?.trim() || null,
         input.donationLink?.trim() || null,
+        input.requireEmailVerification,
+        input.autoEmailOnPublish,
       ],
     )
   } catch (err) {
@@ -510,7 +652,9 @@ export async function updateCampaign(
       `UPDATE campaigns
          SET title = $2, tagline = $3, description = $4, status = $5,
              ai_moderation = $6, ai_level = $7, video_link = $8,
-             donation_link = $9, updated_at = now()
+             donation_link = $9, background_image_url = $10,
+             require_email_verification = $11, auto_email_on_publish = $12,
+             updated_at = now()
        WHERE id = $1`,
       [
         id,
@@ -522,6 +666,9 @@ export async function updateCampaign(
         input.aiLevel,
         input.videoLink?.trim() || null,
         input.donationLink?.trim() || null,
+        input.backgroundImageUrl?.trim() || null,
+        input.requireEmailVerification,
+        input.autoEmailOnPublish,
       ],
     )
   } catch (err) {
