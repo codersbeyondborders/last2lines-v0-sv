@@ -18,14 +18,24 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Convert File to ArrayBuffer then Buffer for Vercel Blob
+    const arrayBuffer = await file.arrayBuffer()
+    const buffer = Buffer.from(arrayBuffer)
+
     // Upload to public Blob storage
-    const blob = await put(file.name, file, {
+    const blob = await put(file.name, buffer, {
       access: 'public',
+      contentType: file.type,
     })
 
     return NextResponse.json({ url: blob.url })
   } catch (error) {
     console.error('Upload error:', error)
-    return NextResponse.json({ error: 'Upload failed' }, { status: 500 })
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error'
+    return NextResponse.json(
+      { error: `Upload failed: ${errorMessage}` },
+      { status: 500 }
+    )
   }
 }

@@ -38,16 +38,22 @@ export function ImageUpload({ onUploadComplete, value }: ImageUploadProps) {
         body: formData,
       })
 
+      const data = await response.json()
+
       if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.error || 'Upload failed')
+        throw new Error(data.error || `Upload failed with status ${response.status}`)
       }
 
-      const { url } = await response.json()
+      const { url } = data
+      if (!url) {
+        throw new Error('No URL returned from upload')
+      }
+
       setPreviewUrl(url)
       onUploadComplete(url)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Upload failed')
+      const errorMessage = err instanceof Error ? err.message : 'Upload failed'
+      setError(errorMessage)
     } finally {
       setUploading(false)
     }
