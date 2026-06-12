@@ -1,11 +1,12 @@
 'use client'
 
+import { Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { CheckCircle2, AlertCircle } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 
-export default function VerificationResultPage() {
+function VerificationResultContent() {
   const searchParams = useSearchParams()
   const message = searchParams.get('message') || 'Processing...'
   const campaignId = searchParams.get('campaignId')
@@ -45,5 +46,13 @@ export default function VerificationResultPage() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+export default function VerificationResultPage() {
+  return (
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center">Loading...</div>}>
+      <VerificationResultContent />
+    </Suspense>
   )
 }
