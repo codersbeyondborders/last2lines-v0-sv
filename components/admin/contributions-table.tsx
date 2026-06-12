@@ -45,6 +45,7 @@ type FilterKey = ContributionStatus | "all"
 
 const FILTERS: { key: FilterKey; label: string }[] = [
   { key: "all", label: "All" },
+  { key: "unverified", label: "Unverified" },
   { key: "pending", label: "Pending" },
   { key: "approved", label: "Approved" },
   { key: "rejected", label: "Rejected" },
@@ -76,6 +77,7 @@ export function ContributionsTable({
       : items
     return {
       all: base.length,
+      unverified: base.filter((c) => c.status === "unverified").length,
       pending: base.filter((c) => c.status === "pending").length,
       approved: base.filter((c) => c.status === "approved").length,
       rejected: base.filter((c) => c.status === "rejected").length,
@@ -248,7 +250,9 @@ export function ContributionsTable({
                           ? "Auto-approved"
                           : c.status === "pending"
                             ? "Awaiting review"
-                            : "—")}
+                            : c.status === "unverified"
+                              ? "Awaiting email verification"
+                              : "—")}
                     </span>
                   </TableCell>
                   <TableCell className="text-right">

@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, type FormEvent } from "react"
-import { CheckCircle2, Loader2, AlertCircle, CalendarClock, Lock } from "lucide-react"
+import { useState, type FormEvent, useEffect } from "react"
+import { CheckCircle2, Loader2, AlertCircle, CalendarClock, Lock, MailCheck } from "lucide-react"
 import {
   Card,
   CardContent,
@@ -104,8 +104,17 @@ function ActiveForm({ campaign }: { campaign: Campaign }) {
   const [status, setStatus] = useState<Status>("idle")
   const [serverError, setServerError] = useState<string | null>(null)
   const [outcome, setOutcome] = useState<
-    "approved" | "rejected" | "pending" | null
+    "approved" | "rejected" | "pending" | "unverified" | null
   >(null)
+  const [botIdReady, setBotIdReady] = useState(false)
+
+  // Initialize BOTID on component mount
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      // BOTID automatically initializes via next.config
+      setBotIdReady(true)
+    }
+  }, [])
 
   function validate(): FieldErrors {
     const errors: FieldErrors = {}
@@ -195,9 +204,14 @@ function ActiveForm({ campaign }: { campaign: Campaign }) {
           ? "Our AI moderation check wasn't fully certain, so your couplet has been queued for a human reviewer. Once approved, it will join the living poem."
           : "Your couplet is queued for review. Once approved, it will be stitched into the living poem.",
       },
+      unverified: {
+        title: "Check your inbox to confirm",
+        body: "Almost there! We've emailed you a confirmation link. Click it to verify your email — your couplet will be reviewed and published only after you confirm.",
+      },
     }[outcome ?? "pending"]
 
     const rejected = outcome === "rejected"
+    const unverified = outcome === "unverified"
 
     return (
       <Card className="mx-auto max-w-xl text-center" size="default">
@@ -207,6 +221,8 @@ function ActiveForm({ campaign }: { campaign: Campaign }) {
               className="size-12 text-muted-foreground"
               aria-hidden="true"
             />
+          ) : unverified ? (
+            <MailCheck className="size-12 text-primary" aria-hidden="true" />
           ) : (
             <CheckCircle2 className="size-12 text-primary" aria-hidden="true" />
           )}
@@ -345,12 +361,17 @@ function ActiveForm({ campaign }: { campaign: Campaign }) {
             type="submit"
             size="lg"
             className="h-11 w-full text-base"
-            disabled={!isValid || status === "submitting"}
+            disabled={!isValid || status === "submitting" || !botIdReady}
           >
             {status === "submitting" ? (
               <>
                 <Loader2 className="size-4 animate-spin" aria-hidden="true" />
                 Weaving your lines…
+              </>
+            ) : !botIdReady ? (
+              <>
+                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                Preparing form…
               </>
             ) : (
               "Submit to the Poem"

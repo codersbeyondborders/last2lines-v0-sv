@@ -7,7 +7,11 @@ export type CampaignStatus =
   | 'paused'
   | 'completed'
   | 'archived'
-export type ContributionStatus = 'pending' | 'approved' | 'rejected'
+export type ContributionStatus =
+  | 'unverified'
+  | 'pending'
+  | 'approved'
+  | 'rejected'
 export type ModerationLevel = 'lenient' | 'standard' | 'strict'
 export type AuthorStatus = 'active' | 'banned'
 
@@ -28,6 +32,10 @@ export interface Campaign {
   /** When true, the AI auto-moderates submissions. Admin-controlled per campaign. */
   aiModeration: boolean
   aiLevel: ModerationLevel
+  /** When true, authors must confirm their email (via Resend) before moderation. */
+  requireEmailVerification: boolean
+  /** When true, authors get an automatic email once their couplet is published. */
+  autoEmailOnPublish: boolean
   contributionCount: number
   /** Primary hero/background image. */
   backgroundImageUrl: string
@@ -94,6 +102,8 @@ export const MOCK_CAMPAIGNS: Campaign[] = [
     status: 'active',
     aiModeration: true,
     aiLevel: 'standard',
+    requireEmailVerification: false,
+    autoEmailOnPublish: false,
     contributionCount: 8,
     backgroundImageUrl:
       '/placeholder.svg?height=600&width=960&query=lush%20green%20forest%20canopy%20from%20above%20with%20misty%20morning%20light',
@@ -126,6 +136,8 @@ export const MOCK_CAMPAIGNS: Campaign[] = [
     status: 'draft',
     aiModeration: true,
     aiLevel: 'strict',
+    requireEmailVerification: false,
+    autoEmailOnPublish: false,
     contributionCount: 0,
     backgroundImageUrl:
       '/placeholder.svg?height=600&width=960&query=winding%20river%20through%20a%20green%20valley%20at%20dawn',
@@ -156,6 +168,8 @@ export const MOCK_CAMPAIGNS: Campaign[] = [
     status: 'completed',
     aiModeration: false,
     aiLevel: 'lenient',
+    requireEmailVerification: false,
+    autoEmailOnPublish: false,
     contributionCount: 142,
     backgroundImageUrl:
       '/placeholder.svg?height=600&width=960&query=ancient%20tall%20forest%20trees%20with%20sunlight%20streaming%20through',
