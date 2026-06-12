@@ -10,6 +10,7 @@ import {
   sendVerificationEmail,
   sendPublishedEmail,
 } from "@/lib/email"
+import { checkBotId } from "botid/server"
 import type { Contribution } from "@/lib/mock-data"
 
 const VERSE_MAX = 100
@@ -125,6 +126,12 @@ export async function submitContribution(input: {
   lineTwo: string
   consent: boolean
 }): Promise<SubmitResult> {
+  // BOTID server-side verification to protect against bot submissions
+  const { isBot } = await checkBotId()
+  if (isBot) {
+    return { ok: false, error: "Bot detection failed. Please try again." }
+  }
+
   const fullName = input.fullName?.trim()
   const email = input.email?.trim().toLowerCase()
   const lineOne = input.lineOne?.trim()

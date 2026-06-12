@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, type FormEvent } from "react"
+import { useState, type FormEvent, useEffect } from "react"
 import { CheckCircle2, Loader2, AlertCircle, CalendarClock, Lock, MailCheck } from "lucide-react"
 import {
   Card,
@@ -106,6 +106,15 @@ function ActiveForm({ campaign }: { campaign: Campaign }) {
   const [outcome, setOutcome] = useState<
     "approved" | "rejected" | "pending" | "unverified" | null
   >(null)
+  const [botIdReady, setBotIdReady] = useState(false)
+
+  // Initialize BOTID on component mount
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      // BOTID automatically initializes via next.config
+      setBotIdReady(true)
+    }
+  }, [])
 
   function validate(): FieldErrors {
     const errors: FieldErrors = {}
@@ -352,12 +361,17 @@ function ActiveForm({ campaign }: { campaign: Campaign }) {
             type="submit"
             size="lg"
             className="h-11 w-full text-base"
-            disabled={!isValid || status === "submitting"}
+            disabled={!isValid || status === "submitting" || !botIdReady}
           >
             {status === "submitting" ? (
               <>
                 <Loader2 className="size-4 animate-spin" aria-hidden="true" />
                 Weaving your lines…
+              </>
+            ) : !botIdReady ? (
+              <>
+                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                Preparing form…
               </>
             ) : (
               "Submit to the Poem"
