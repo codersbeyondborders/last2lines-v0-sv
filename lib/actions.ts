@@ -5,10 +5,104 @@ import { nanoid } from "nanoid"
 import { query, withConnection } from "@/lib/db"
 import { createClient } from "@/lib/supabase/server"
 import { moderateCouplet } from "@/lib/ai-moderation"
+import {
+  getSiteUrl,
+  sendVerificationEmail,
+  sendPublishedEmail,
+} from "@/lib/email"
 import type { Contribution } from "@/lib/mock-data"
 
 const VERSE_MAX = 100
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+/** Shape of the campaign fields needed to moderate + route a submission. */
+interface CampaignModerationContext {
+  id: string
+  slug: string
+  title: string
+  theme: string
+  description: string
+  ai_moderation: boolean
+  ai_level: "lenient" | "standard" | "strict"
+}
+
+interface ModerationOutcome {
+  status: Contribution["status"]
+  reason: string | null
+  lineOne: string
+  lineTwo: string
+}
+
+/**
+ * Run AI auto-moderation (when enabled) and resolve the final status + lines.
+ *
+ * Decision outcomes:
+ *   publish → approved as submitted
+ *   curate  → approved with AI-rewritten lines
+ *   manual  → pending for a human moderator
+ *
+ * Any AI failure (or AI disabled) falls back to manual (pending).
+ */
+async function runModeration(
+  campaign: CampaignModerationContext,
+  lineOne: string,
+  lineTwo: string,
+): Promise<ModerationOutcome> {
+  if (!campaign.ai_moderation) {
+    return { status: "pending", reason: null, lineOne, lineTwo }
+  }
+
+  // Fetch the last two approved couplets to give the AI poem context.
+  const { rows: prevRows } = await query<{
+    line_one: string
+    line_two: string
+  }>(
+    `SELECT line_one, line_two
+       FROM contributions
+      WHERE campaign_id = $1 AND status = 'approved'
+      ORDER BY sequence_number DESC
+      LIMIT 2`,
+    [campaign.id],
+  )
+  const previousCouplets = prevRows
+    .reverse()
+    .map((r) => ({ lineOne: r.line_one, lineTwo: r.line_two }))
+
+  const verdict = await moderateCouplet({
+    lineOne,
+    lineTwo,
+    level: campaign.ai_level,
+    campaignTitle: campaign.title,
+    campaignTheme: campaign.theme,
+    campaignDescription: campaign.description,
+    previousCouplets,
+  })
+
+  if (verdict.decision === "publish") {
+    return {
+      status: "approved",
+      reason: `AI (${campaign.ai_level}): ${verdict.reason}`,
+      lineOne,
+      lineTwo,
+    }
+  }
+  if (verdict.decision === "curate") {
+    return {
+      status: "approved",
+      reason: `AI curated (${campaign.ai_level}): ${verdict.reason}`,
+      lineOne: verdict.curatedLineOne ?? lineOne,
+      lineTwo: verdict.curatedLineTwo ?? lineTwo,
+    }
+  }
+  return {
+    status: "pending",
+    reason: verdict.fallback
+      ? `AI unavailable: ${verdict.reason}`
+      : `AI flagged for manual review (${campaign.ai_level}): ${verdict.reason}`,
+    lineOne,
+    lineTwo,
+  }
+}
 
 export interface SubmitResult {
   ok: boolean
@@ -59,9 +153,11 @@ export async function submitContribution(input: {
     description: string
     ai_moderation: boolean
     ai_level: "lenient" | "standard" | "strict"
+    require_email_verification: boolean
+    auto_email_on_publish: boolean
   }>(
     `SELECT id, slug, status, start_date, close_date, title, theme, description,
-            ai_moderation, ai_level
+            ai_moderation, ai_level, require_email_verification, auto_email_on_publish
        FROM campaigns WHERE id = $1`,
     [input.campaignId],
   )
@@ -76,66 +172,28 @@ export async function submitContribution(input: {
   if (!open)
     return { ok: false, error: "This campaign is not currently accepting submissions." }
 
-  // Run AI auto-moderation (AWS Bedrock) when enabled for this campaign.
-  //
-  // Decision outcomes:
-  //   publish → approved as submitted
-  //   curate  → approved with AI-rewritten lines
-  //   manual  → pending for a human moderator
-  //
-  // Any AI failure automatically falls back to manual (pending).
-  let initialStatus: Contribution["status"] = "pending"
-  let moderationReason: string | null = null
-
-  // lineOne/lineTwo may be replaced by AI-curated versions before insert.
+  // When email verification is required, hold the submission as "unverified"
+  // and skip moderation until the author confirms via the emailed link.
+  // Otherwise, moderate immediately.
+  let initialStatus: Contribution["status"]
+  let moderationReason: string | null
   let finalLineOne = lineOne
   let finalLineTwo = lineTwo
+  let verificationToken: string | null = null
 
-  if (campaign.ai_moderation) {
-    // Fetch the last two approved couplets to give the AI poem context.
-    const { rows: prevRows } = await query<{
-      line_one: string
-      line_two: string
-    }>(
-      `SELECT line_one, line_two
-         FROM contributions
-        WHERE campaign_id = $1 AND status = 'approved'
-        ORDER BY sequence_number DESC
-        LIMIT 2`,
-      [input.campaignId],
-    )
-    // Return them in ascending order so the AI reads them chronologically.
-    const previousCouplets = prevRows
-      .reverse()
-      .map((r) => ({ lineOne: r.line_one, lineTwo: r.line_two }))
-
-    const verdict = await moderateCouplet({
-      lineOne,
-      lineTwo,
-      level: campaign.ai_level,
-      campaignTitle: campaign.title,
-      campaignTheme: campaign.theme,
-      campaignDescription: campaign.description,
-      previousCouplets,
-    })
-
-    if (verdict.decision === "publish") {
-      initialStatus = "approved"
-      moderationReason = `AI (${campaign.ai_level}): ${verdict.reason}`
-    } else if (verdict.decision === "curate") {
-      initialStatus = "approved"
-      // Use the AI-curated lines instead of the raw submission.
-      finalLineOne = verdict.curatedLineOne ?? lineOne
-      finalLineTwo = verdict.curatedLineTwo ?? lineTwo
-      moderationReason = `AI curated (${campaign.ai_level}): ${verdict.reason}`
-    } else {
-      // manual (or fallback) — leave as pending for a human moderator.
-      initialStatus = "pending"
-      moderationReason = verdict.fallback
-        ? `AI unavailable: ${verdict.reason}`
-        : `AI flagged for manual review (${campaign.ai_level}): ${verdict.reason}`
-    }
+  if (campaign.require_email_verification) {
+    initialStatus = "unverified"
+    moderationReason = null
+    verificationToken = nanoid(32)
+  } else {
+    const outcome = await runModeration(campaign, lineOne, lineTwo)
+    initialStatus = outcome.status
+    moderationReason = outcome.reason
+    finalLineOne = outcome.lineOne
+    finalLineTwo = outcome.lineTwo
   }
+
+  let createdContributionId: string | null = null
 
   try {
     await withConnection(async (client) => {
@@ -158,23 +216,42 @@ export async function submitContribution(input: {
         throw new Error("banned")
       }
 
-      // Approved submissions (publish or curate) get the next sequence number.
+      const contributionId = `ctr_${nanoid(12)}`
+      createdContributionId = contributionId
+
       if (initialStatus === "approved") {
+        // Approved submissions (publish or curate) get the next sequence number.
         await client.query(
           `INSERT INTO contributions
              (id, campaign_id, sequence_number, line_one, line_two, author_id,
-              status, moderation_reason)
+              status, moderation_reason, email_verified)
            VALUES ($1, $2,
              COALESCE((SELECT MAX(sequence_number) FROM contributions
                         WHERE campaign_id = $2 AND status = 'approved'), 0) + 1,
-             $3, $4, $5, 'approved', $6)`,
+             $3, $4, $5, 'approved', $6, true)`,
           [
-            `ctr_${nanoid(12)}`,
+            contributionId,
             input.campaignId,
             finalLineOne,
             finalLineTwo,
             author.id,
             moderationReason,
+          ],
+        )
+      } else if (initialStatus === "unverified") {
+        // Held until the author confirms their email.
+        await client.query(
+          `INSERT INTO contributions
+             (id, campaign_id, sequence_number, line_one, line_two, author_id,
+              status, moderation_reason, verification_token, verification_sent_at)
+           VALUES ($1, $2, 0, $3, $4, $5, 'unverified', NULL, $6, now())`,
+          [
+            contributionId,
+            input.campaignId,
+            finalLineOne,
+            finalLineTwo,
+            author.id,
+            verificationToken,
           ],
         )
       } else {
@@ -185,7 +262,7 @@ export async function submitContribution(input: {
               status, moderation_reason)
            VALUES ($1, $2, 0, $3, $4, $5, $6, $7)`,
           [
-            `ctr_${nanoid(12)}`,
+            contributionId,
             input.campaignId,
             finalLineOne,
             finalLineTwo,
@@ -210,10 +287,178 @@ export async function submitContribution(input: {
     }
   }
 
+  // Side effects after the row is committed.
+  if (initialStatus === "unverified" && verificationToken) {
+    // Send the verification link. If email is unconfigured it's a no-op.
+    const verifyUrl = `${getSiteUrl()}/verify/${verificationToken}`
+    await sendVerificationEmail({
+      to: email,
+      name: fullName,
+      campaignTitle: campaign.title,
+      verifyUrl,
+    })
+  } else if (
+    initialStatus === "approved" &&
+    campaign.auto_email_on_publish &&
+    createdContributionId
+  ) {
+    // Auto-notify the author that their couplet is live.
+    await sendPublishedEmail({
+      to: email,
+      name: fullName,
+      campaignTitle: campaign.title,
+      poemUrl: `${getSiteUrl()}/campaign/${campaign.slug}#poem`,
+    })
+    await query(
+      `UPDATE contributions SET publish_email_sent_at = now() WHERE id = $1`,
+      [createdContributionId],
+    )
+  }
+
   revalidatePath(`/campaign/${campaign.slug}`)
   revalidatePath("/dashboard")
   revalidatePath("/dashboard/contributions")
   return { ok: true, status: initialStatus }
+}
+
+// ----------------------------------------------------------------------------
+// Public: verify a submission via the emailed token.
+// ----------------------------------------------------------------------------
+
+export interface VerifyResult {
+  ok: boolean
+  error?: string
+  /** Status the contribution landed in after verification + moderation. */
+  status?: Contribution["status"]
+  campaignSlug?: string
+  campaignTitle?: string
+}
+
+/**
+ * Confirm a contribution's email via its verification token. On success the
+ * couplet proceeds to moderation (the step that was deferred at submit time).
+ * Idempotent: re-visiting an already-verified link reports the current status.
+ */
+export async function verifyContribution(
+  token: string,
+): Promise<VerifyResult> {
+  if (!token) return { ok: false, error: "Missing verification token." }
+
+  // Locate the contribution + its campaign moderation context.
+  const { rows } = await query<{
+    id: string
+    status: Contribution["status"]
+    line_one: string
+    line_two: string
+    author_id: string
+    email_verified: boolean
+    author_email: string
+    author_name: string | null
+    campaign_id: string
+    slug: string
+    title: string
+    theme: string
+    description: string
+    ai_moderation: boolean
+    ai_level: "lenient" | "standard" | "strict"
+    auto_email_on_publish: boolean
+  }>(
+    `SELECT c.id, c.status, c.line_one, c.line_two, c.author_id, c.email_verified,
+            a.email AS author_email, a.name AS author_name,
+            cm.id AS campaign_id, cm.slug, cm.title, cm.theme, cm.description,
+            cm.ai_moderation, cm.ai_level, cm.auto_email_on_publish
+       FROM contributions c
+       JOIN authors a ON a.id = c.author_id
+       JOIN campaigns cm ON cm.id = c.campaign_id
+      WHERE c.verification_token = $1
+      LIMIT 1`,
+    [token],
+  )
+  const row = rows[0]
+  if (!row) return { ok: false, error: "This verification link is invalid or has expired." }
+
+  // Already verified — report the current state without re-processing.
+  if (row.email_verified || row.status !== "unverified") {
+    return {
+      ok: true,
+      status: row.status === "unverified" ? "pending" : row.status,
+      campaignSlug: row.slug,
+      campaignTitle: row.title,
+    }
+  }
+
+  // Now run the moderation that was deferred until verification.
+  const outcome = await runModeration(
+    {
+      id: row.campaign_id,
+      slug: row.slug,
+      title: row.title,
+      theme: row.theme,
+      description: row.description,
+      ai_moderation: row.ai_moderation,
+      ai_level: row.ai_level,
+    },
+    row.line_one,
+    row.line_two,
+  )
+
+  try {
+    if (outcome.status === "approved") {
+      await query(
+        `UPDATE contributions
+           SET status = 'approved',
+               email_verified = true,
+               verification_token = NULL,
+               moderation_reason = $2,
+               line_one = $3,
+               line_two = $4,
+               sequence_number = COALESCE(
+                 (SELECT MAX(sequence_number) FROM contributions
+                   WHERE campaign_id = $5 AND status = 'approved'), 0) + 1
+         WHERE id = $1`,
+        [row.id, outcome.reason, outcome.lineOne, outcome.lineTwo, row.campaign_id],
+      )
+    } else {
+      await query(
+        `UPDATE contributions
+           SET status = $2,
+               email_verified = true,
+               verification_token = NULL,
+               moderation_reason = $3,
+               line_one = $4,
+               line_two = $5
+         WHERE id = $1`,
+        [row.id, outcome.status, outcome.reason, outcome.lineOne, outcome.lineTwo],
+      )
+    }
+  } catch (err) {
+    console.log("[v0] verifyContribution error:", err)
+    return { ok: false, error: "Could not verify your submission. Please try again." }
+  }
+
+  // Auto-email on publish, when enabled and the couplet went live.
+  if (outcome.status === "approved" && row.auto_email_on_publish) {
+    await sendPublishedEmail({
+      to: row.author_email,
+      name: row.author_name,
+      campaignTitle: row.title,
+      poemUrl: `${getSiteUrl()}/campaign/${row.slug}#poem`,
+    })
+    await query(
+      `UPDATE contributions SET publish_email_sent_at = now() WHERE id = $1`,
+      [row.id],
+    )
+  }
+
+  revalidatePath(`/campaign/${row.slug}`)
+  revalidatePath("/dashboard")
+  revalidatePath("/dashboard/contributions")
+  return {
+    ok: true,
+    status: outcome.status,
+    campaignSlug: row.slug,
+    campaignTitle: row.title,
+  }
 }
 
 // ----------------------------------------------------------------------------
@@ -244,20 +489,48 @@ export async function moderateContribution(input: {
     return { ok: false, error: "You must be signed in to moderate." }
   }
 
+  // Capture details needed to optionally email the author on approval.
+  interface PublishEmailContext {
+    contributionId: string
+    email: string
+    name: string | null
+    slug: string
+    title: string
+    alreadySent: boolean
+  }
+  let emailContext: PublishEmailContext | null = null
+
   try {
     await withConnection(async (client) => {
-      const { rows } = await client.query<{ campaign_id: string }>(
-        `SELECT campaign_id FROM contributions WHERE id = $1`,
+      const { rows } = await client.query<{
+        campaign_id: string
+        author_email: string
+        author_name: string | null
+        slug: string
+        title: string
+        auto_email_on_publish: boolean
+        publish_email_sent_at: Date | null
+      }>(
+        `SELECT c.campaign_id,
+                a.email AS author_email, a.name AS author_name,
+                cm.slug, cm.title, cm.auto_email_on_publish,
+                c.publish_email_sent_at
+           FROM contributions c
+           JOIN authors a ON a.id = c.author_id
+           JOIN campaigns cm ON cm.id = c.campaign_id
+          WHERE c.id = $1`,
         [input.id],
       )
-      const campaignId = rows[0]?.campaign_id
-      if (!campaignId) throw new Error("not found")
+      const detail = rows[0]
+      if (!detail) throw new Error("not found")
+      const campaignId = detail.campaign_id
 
       if (input.status === "approved") {
         // Assign the next sequence number for this campaign's poem.
         await client.query(
           `UPDATE contributions
              SET status = 'approved',
+                 email_verified = true,
                  moderation_reason = $2,
                  sequence_number = COALESCE(
                    (SELECT MAX(sequence_number) FROM contributions
@@ -265,6 +538,16 @@ export async function moderateContribution(input: {
            WHERE id = $1`,
           [input.id, input.reason ?? null, campaignId],
         )
+        if (detail.auto_email_on_publish) {
+          emailContext = {
+            contributionId: input.id,
+            email: detail.author_email,
+            name: detail.author_name,
+            slug: detail.slug,
+            title: detail.title,
+            alreadySent: detail.publish_email_sent_at != null,
+          }
+        }
       } else {
         // Rejecting or requeuing drops it out of the ordered poem.
         await client.query(
@@ -278,6 +561,21 @@ export async function moderateContribution(input: {
   } catch (err) {
     console.log("[v0] moderateContribution error:", err)
     return { ok: false, error: "Could not update this contribution." }
+  }
+
+  // Send the "your couplet is live" email once, after the commit.
+  const ctx = emailContext as PublishEmailContext | null
+  if (ctx && !ctx.alreadySent) {
+    await sendPublishedEmail({
+      to: ctx.email,
+      name: ctx.name,
+      campaignTitle: ctx.title,
+      poemUrl: `${getSiteUrl()}/campaign/${ctx.slug}#poem`,
+    })
+    await query(
+      `UPDATE contributions SET publish_email_sent_at = now() WHERE id = $1`,
+      [ctx.contributionId],
+    )
   }
 
   revalidatePath("/dashboard")
@@ -428,6 +726,8 @@ export interface CampaignInput {
   status: "draft" | "active" | "paused" | "completed"
   aiModeration: boolean
   aiLevel: "lenient" | "standard" | "strict"
+  requireEmailVerification: boolean
+  autoEmailOnPublish: boolean
   videoLink?: string | null
   donationLink?: string | null
 }
@@ -458,10 +758,11 @@ export async function createCampaign(
       `INSERT INTO campaigns
          (id, slug, title, tagline, description, instructions, theme,
           accent_color, status, ai_moderation, ai_level,
+          require_email_verification, auto_email_on_publish,
           background_image_url, campaign_images, video_link, donation_link,
           start_date, close_date, created_at, updated_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
-               now(), now() + interval '30 days', now(), now())`,
+               $16, $17, now(), now() + interval '30 days', now(), now())`,
       [
         id,
         slug,
@@ -474,6 +775,8 @@ export async function createCampaign(
         input.status,
         input.aiModeration,
         input.aiLevel,
+        input.requireEmailVerification,
+        input.autoEmailOnPublish,
         "/placeholder.svg?height=900&width=1600",
         [],
         input.videoLink?.trim() || null,
@@ -510,7 +813,8 @@ export async function updateCampaign(
       `UPDATE campaigns
          SET title = $2, tagline = $3, description = $4, status = $5,
              ai_moderation = $6, ai_level = $7, video_link = $8,
-             donation_link = $9, updated_at = now()
+             donation_link = $9, require_email_verification = $10,
+             auto_email_on_publish = $11, updated_at = now()
        WHERE id = $1`,
       [
         id,
@@ -522,6 +826,8 @@ export async function updateCampaign(
         input.aiLevel,
         input.videoLink?.trim() || null,
         input.donationLink?.trim() || null,
+        input.requireEmailVerification,
+        input.autoEmailOnPublish,
       ],
     )
   } catch (err) {

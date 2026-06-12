@@ -23,6 +23,8 @@ interface CampaignRow {
   status: Campaign["status"]
   ai_moderation: boolean
   ai_level: Campaign["aiLevel"]
+  require_email_verification: boolean
+  auto_email_on_publish: boolean
   background_image_url: string
   campaign_images: string[]
   video_link: string | null
@@ -46,6 +48,8 @@ function mapCampaign(row: CampaignRow): Campaign {
     status: row.status,
     aiModeration: row.ai_moderation,
     aiLevel: row.ai_level,
+    requireEmailVerification: row.require_email_verification,
+    autoEmailOnPublish: row.auto_email_on_publish,
     contributionCount:
       row.contribution_count != null ? Number(row.contribution_count) : 0,
     backgroundImageUrl: row.background_image_url,

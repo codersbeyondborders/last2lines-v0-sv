@@ -80,6 +80,12 @@ export function CampaignForm({ campaign }: { campaign?: Campaign }) {
   const [aiLevel, setAiLevel] = useState<ModerationLevel>(
     campaign?.aiLevel ?? "standard",
   )
+  const [requireEmailVerification, setRequireEmailVerification] = useState(
+    campaign?.requireEmailVerification ?? false,
+  )
+  const [autoEmailOnPublish, setAutoEmailOnPublish] = useState(
+    campaign?.autoEmailOnPublish ?? false,
+  )
   const [seeds, setSeeds] = useState<SeedCouplet[]>([])
   const [carouselCount, setCarouselCount] = useState(0)
 
@@ -120,6 +126,8 @@ export function CampaignForm({ campaign }: { campaign?: Campaign }) {
       status: status as "draft" | "active" | "paused" | "completed",
       aiModeration,
       aiLevel,
+      requireEmailVerification,
+      autoEmailOnPublish,
       videoLink: videoLink.trim() || null,
       donationLink: donationLink.trim() || null,
     }
@@ -351,6 +359,49 @@ export function CampaignForm({ campaign }: { campaign?: Campaign }) {
             </p>
           </div>
         ) : null}
+      </FormSection>
+
+      {/* Email (Resend) */}
+      <FormSection
+        title="Email"
+        description="Optional Resend-powered emails for this campaign's contributors."
+      >
+        <div className="flex items-start justify-between gap-4 rounded-lg border border-border bg-card px-4 py-3">
+          <div className="flex flex-col gap-0.5">
+            <Label
+              htmlFor="require-email-verification"
+              className="cursor-pointer"
+            >
+              Require email verification
+            </Label>
+            <p className="text-sm text-muted-foreground text-pretty">
+              When on, contributors must confirm their email via a link before
+              their couplet is reviewed or published.
+            </p>
+          </div>
+          <Switch
+            id="require-email-verification"
+            checked={requireEmailVerification}
+            onCheckedChange={(v) => setRequireEmailVerification(Boolean(v))}
+          />
+        </div>
+
+        <div className="flex items-start justify-between gap-4 rounded-lg border border-border bg-card px-4 py-3">
+          <div className="flex flex-col gap-0.5">
+            <Label htmlFor="auto-email-on-publish" className="cursor-pointer">
+              Auto email on publish
+            </Label>
+            <p className="text-sm text-muted-foreground text-pretty">
+              When on, contributors receive an automatic confirmation email
+              with a link to the poem as soon as their couplet is published.
+            </p>
+          </div>
+          <Switch
+            id="auto-email-on-publish"
+            checked={autoEmailOnPublish}
+            onCheckedChange={(v) => setAutoEmailOnPublish(Boolean(v))}
+          />
+        </div>
       </FormSection>
 
       {/* Seed Data */}

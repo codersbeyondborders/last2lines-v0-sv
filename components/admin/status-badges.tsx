@@ -23,6 +23,7 @@ const CONTRIBUTION_META: Record<
 > = {
   approved: { label: "Approved", variant: "default" },
   pending: { label: "Pending", variant: "secondary" },
+  unverified: { label: "Unverified", variant: "outline" },
   rejected: { label: "Rejected", variant: "destructive" },
 }
 

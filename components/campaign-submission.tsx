@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, type FormEvent } from "react"
-import { CheckCircle2, Loader2, AlertCircle, CalendarClock, Lock } from "lucide-react"
+import { CheckCircle2, Loader2, AlertCircle, CalendarClock, Lock, MailCheck } from "lucide-react"
 import {
   Card,
   CardContent,
@@ -104,7 +104,7 @@ function ActiveForm({ campaign }: { campaign: Campaign }) {
   const [status, setStatus] = useState<Status>("idle")
   const [serverError, setServerError] = useState<string | null>(null)
   const [outcome, setOutcome] = useState<
-    "approved" | "rejected" | "pending" | null
+    "approved" | "rejected" | "pending" | "unverified" | null
   >(null)
 
   function validate(): FieldErrors {
@@ -195,9 +195,14 @@ function ActiveForm({ campaign }: { campaign: Campaign }) {
           ? "Our AI moderation check wasn't fully certain, so your couplet has been queued for a human reviewer. Once approved, it will join the living poem."
           : "Your couplet is queued for review. Once approved, it will be stitched into the living poem.",
       },
+      unverified: {
+        title: "Check your inbox to confirm",
+        body: "Almost there! We've emailed you a confirmation link. Click it to verify your email — your couplet will be reviewed and published only after you confirm.",
+      },
     }[outcome ?? "pending"]
 
     const rejected = outcome === "rejected"
+    const unverified = outcome === "unverified"
 
     return (
       <Card className="mx-auto max-w-xl text-center" size="default">
@@ -207,6 +212,8 @@ function ActiveForm({ campaign }: { campaign: Campaign }) {
               className="size-12 text-muted-foreground"
               aria-hidden="true"
             />
+          ) : unverified ? (
+            <MailCheck className="size-12 text-primary" aria-hidden="true" />
           ) : (
             <CheckCircle2 className="size-12 text-primary" aria-hidden="true" />
           )}
