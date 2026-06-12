@@ -3,7 +3,6 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import {
-  ImagePlus,
   Plus,
   Trash2,
   Loader2,
@@ -29,6 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { ImageUpload } from "@/components/image-upload"
 import { cn } from "@/lib/utils"
 
 const STATUS_OPTIONS: { value: CampaignStatus; label: string }[] = [
@@ -66,6 +66,9 @@ export function CampaignForm({ campaign }: { campaign?: Campaign }) {
   const [title, setTitle] = useState(campaign?.title ?? "")
   const [tagline, setTagline] = useState(campaign?.tagline ?? "")
   const [description, setDescription] = useState(campaign?.description ?? "")
+  const [backgroundImageUrl, setBackgroundImageUrl] = useState(
+    campaign?.backgroundImageUrl ?? "",
+  )
   const [videoLink, setVideoLink] = useState(campaign?.videoLink ?? "")
   const [donationLink, setDonationLink] = useState(
     campaign?.donationLink ?? "",
@@ -115,6 +118,7 @@ export function CampaignForm({ campaign }: { campaign?: Campaign }) {
       title: title.trim(),
       tagline: tagline.trim(),
       description: description.trim(),
+      backgroundImageUrl: backgroundImageUrl.trim() || null,
       status: status as "draft" | "active" | "paused" | "completed",
       aiModeration,
       aiLevel,
@@ -209,8 +213,11 @@ export function CampaignForm({ campaign }: { campaign?: Campaign }) {
         description="A background image shown on campaign cards and the campaign hero."
       >
         <div className="flex flex-col gap-2">
-          <Label>Background image</Label>
-          <UploadDropzone label="Upload a background image" />
+          <Label htmlFor="background-image">Background image</Label>
+          <ImageUpload
+            value={backgroundImageUrl}
+            onUploadComplete={(url) => setBackgroundImageUrl(url)}
+          />
         </div>
       </FormSection>
 
@@ -432,18 +439,5 @@ function FormSection({
         {children}
       </CardContent>
     </Card>
-  )
-}
-
-function UploadDropzone({ label }: { label: string }) {
-  return (
-    <button
-      type="button"
-      className="flex w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border bg-muted/30 px-4 py-8 text-sm text-muted-foreground transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-    >
-      <ImagePlus className="size-6" aria-hidden="true" />
-      {label}
-      <span className="text-xs">PNG or JPG, drag and drop or click</span>
-    </button>
   )
 }
