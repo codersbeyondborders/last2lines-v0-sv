@@ -22,10 +22,11 @@ export async function POST(request: NextRequest) {
     const arrayBuffer = await file.arrayBuffer()
     const buffer = Buffer.from(arrayBuffer)
 
-    // Upload to public Blob storage
+    // Upload to public Blob storage with random suffix to avoid conflicts
     const blob = await put(file.name, buffer, {
       access: 'public',
       contentType: file.type,
+      addRandomSuffix: true,
     })
 
     return NextResponse.json({ url: blob.url })
