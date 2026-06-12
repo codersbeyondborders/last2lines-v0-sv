@@ -30,7 +30,7 @@ export async function POST() {
         accentColor: '#10b981',
         status: 'active',
         aiModeration: true,
-        aiLevel: 'moderate',
+        aiLevel: 'standard',
         backgroundImageUrl: '/placeholder.svg?height=400&width=1200',
         campaignImages: [],
         videoLink: null,
@@ -55,7 +55,7 @@ export async function POST() {
         accentColor: '#d946ef',
         status: 'active',
         aiModeration: true,
-        aiLevel: 'moderate',
+        aiLevel: 'standard',
         backgroundImageUrl: '/placeholder.svg?height=400&width=1200',
         campaignImages: [],
         videoLink: null,
@@ -80,7 +80,7 @@ export async function POST() {
         accentColor: '#0ea5e9',
         status: 'active',
         aiModeration: true,
-        aiLevel: 'moderate',
+        aiLevel: 'standard',
         backgroundImageUrl: '/placeholder.svg?height=400&width=1200',
         campaignImages: [],
         videoLink: null,
@@ -105,7 +105,7 @@ export async function POST() {
         accentColor: '#f59e0b',
         status: 'active',
         aiModeration: true,
-        aiLevel: 'moderate',
+        aiLevel: 'standard',
         backgroundImageUrl: '/placeholder.svg?height=400&width=1200',
         campaignImages: [],
         videoLink: null,
@@ -179,7 +179,7 @@ export async function POST() {
         `INSERT INTO moderation_settings (
           id, campaign_id, level, profanity_filter, enforce_theme, confidence_threshold, updated_at
         ) VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
-        [settingsId, id, 'moderate', true, false, 0.75],
+        [settingsId, id, 'standard', true, false, 0.75],
       )
 
       console.log(`✓ Created campaign: ${title}`)
