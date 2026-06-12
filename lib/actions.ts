@@ -6,6 +6,7 @@ import { query, withConnection } from "@/lib/db"
 import { createClient } from "@/lib/supabase/server"
 import { moderateCouplet } from "@/lib/ai-moderation"
 import type { Contribution } from "@/lib/mock-data"
+import type { CampaignInput, CampaignResult } from "@/lib/actions-types"
 
 const VERSE_MAX = 100
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -16,6 +17,8 @@ export interface SubmitResult {
   /** Resulting moderation status of a public submission, when applicable. */
   status?: Contribution["status"]
 }
+
+export type { CampaignInput, CampaignResult }
 
 /**
  * Public action: a visitor submits a two-line couplet to a campaign.
@@ -541,6 +544,7 @@ export async function sendPublishConfirmationEmail(input: {
     console.error("[v0] Send publish confirmation email error:", error)
     return { ok: false, error: "Failed to send confirmation email" }
   }
+}
 
 // ----------------------------------------------------------------------------
 // Campaign create / update / delete
@@ -557,23 +561,6 @@ function slugify(input: string): string {
   )
 }
 
-export interface CampaignInput {
-  title: string
-  tagline: string
-  description: string
-  backgroundImageUrl?: string | null
-  status: "draft" | "active" | "paused" | "completed"
-  aiModeration: boolean
-  aiLevel: "lenient" | "standard" | "strict"
-  videoLink?: string | null
-  donationLink?: string | null
-  requireEmailVerification: boolean
-  autoEmailOnPublish: boolean
-}
-
-export interface CampaignResult extends SubmitResult {
-  id?: string
-}
 
 /** Create a new campaign. Generates a unique slug from the title. */
 export async function createCampaign(
