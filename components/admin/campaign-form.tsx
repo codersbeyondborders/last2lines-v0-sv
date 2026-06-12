@@ -57,6 +57,7 @@ interface SeedCouplet {
   id: string
   lineOne: string
   lineTwo: string
+  author: string
 }
 
 export function CampaignForm({ campaign }: { campaign?: Campaign }) {
@@ -101,7 +102,7 @@ export function CampaignForm({ campaign }: { campaign?: Campaign }) {
   function addSeed() {
     setSeeds((prev) => [
       ...prev,
-      { id: `seed_${Date.now()}`, lineOne: "", lineTwo: "" },
+      { id: `seed_${Date.now()}`, lineOne: "", lineTwo: "", author: "" },
     ])
   }
 
@@ -414,6 +415,18 @@ export function CampaignForm({ campaign }: { campaign?: Campaign }) {
                       updateSeed(s.id, { lineTwo: e.target.value })
                     }
                     placeholder="Second line"
+                  />
+                  <Label htmlFor={`${s.id}-author`} className="sr-only">
+                    Couplet {i + 1} author
+                  </Label>
+                  <Input
+                    id={`${s.id}-author`}
+                    value={s.author}
+                    maxLength={100}
+                    onChange={(e) =>
+                      updateSeed(s.id, { author: e.target.value })
+                    }
+                    placeholder="Author name"
                   />
                 </div>
               </li>
