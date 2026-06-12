@@ -9,7 +9,6 @@ import {
   Loader2,
   Check,
   AlertCircle,
-  GripVertical,
 } from "lucide-react"
 import {
   type Campaign,
@@ -81,7 +80,6 @@ export function CampaignForm({ campaign }: { campaign?: Campaign }) {
     campaign?.aiLevel ?? "standard",
   )
   const [seeds, setSeeds] = useState<SeedCouplet[]>([])
-  const [carouselCount, setCarouselCount] = useState(0)
 
   const [touched, setTouched] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -208,55 +206,11 @@ export function CampaignForm({ campaign }: { campaign?: Campaign }) {
       {/* Media Uploads */}
       <FormSection
         title="Media"
-        description="A background image and carousel images shown on the campaign page."
+        description="A background image shown on campaign cards and the campaign hero."
       >
         <div className="flex flex-col gap-2">
           <Label>Background image</Label>
           <UploadDropzone label="Upload a background image" />
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center justify-between">
-            <Label>Carousel images</Label>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setCarouselCount((n) => n + 1)}
-            >
-              <Plus className="size-4" aria-hidden="true" />
-              Add image
-            </Button>
-          </div>
-          {carouselCount === 0 ? (
-            <UploadDropzone label="Upload carousel images" />
-          ) : (
-            <ul className="flex flex-col gap-2">
-              {Array.from({ length: carouselCount }).map((_, i) => (
-                <li
-                  key={i}
-                  className="flex items-center gap-3 rounded-lg border border-border bg-card px-3 py-2 text-sm"
-                >
-                  <GripVertical
-                    className="size-4 text-muted-foreground"
-                    aria-hidden="true"
-                  />
-                  <span className="flex-1 text-muted-foreground">
-                    Image {i + 1} · drag to set display order
-                  </span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    aria-label={`Remove image ${i + 1}`}
-                    onClick={() => setCarouselCount((n) => Math.max(0, n - 1))}
-                  >
-                    <Trash2 className="size-4" aria-hidden="true" />
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          )}
         </div>
       </FormSection>
 
