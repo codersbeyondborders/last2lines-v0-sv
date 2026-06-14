@@ -18,8 +18,6 @@ export interface SubmitResult {
   status?: Contribution["status"]
 }
 
-export type { CampaignInput, CampaignResult }
-
 /**
  * Public action: a visitor submits a two-line couplet to a campaign.
  * Creates/links an author, then inserts a pending contribution.
