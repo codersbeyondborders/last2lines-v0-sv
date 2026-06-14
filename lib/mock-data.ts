@@ -31,6 +31,8 @@ export interface Campaign {
   contributionCount: number
   /** Primary hero/background image. */
   backgroundImageUrl: string
+  /** Additional campaign images. */
+  campaignImages: string[]
   videoLink: string | null
   donationLink: string | null
   startDate: string
@@ -99,11 +101,14 @@ export const MOCK_CAMPAIGNS: Campaign[] = [
     contributionCount: 8,
     backgroundImageUrl:
       '/placeholder.svg?height=600&width=960&query=lush%20green%20forest%20canopy%20from%20above%20with%20misty%20morning%20light',
+    campaignImages: [],
     videoLink: 'https://example.com/earth-intro',
     donationLink: 'https://example.com/donate/earth',
     startDate: '2026-05-01T00:00:00.000Z',
     closeDate: '2026-09-30T23:59:59.000Z',
     createdAt: '2026-01-12T09:00:00.000Z',
+    requireEmailVerification: false,
+    autoEmailOnPublish: false,
   },
   {
     id: 'cmp_water',
@@ -126,11 +131,14 @@ export const MOCK_CAMPAIGNS: Campaign[] = [
     contributionCount: 0,
     backgroundImageUrl:
       '/placeholder.svg?height=600&width=960&query=winding%20river%20through%20a%20green%20valley%20at%20dawn',
+    campaignImages: [],
     videoLink: null,
     donationLink: 'https://example.com/donate/water',
     startDate: '2026-07-15T00:00:00.000Z',
     closeDate: '2026-11-30T23:59:59.000Z',
     createdAt: '2026-05-28T13:30:00.000Z',
+    requireEmailVerification: false,
+    autoEmailOnPublish: false,
   },
   {
     id: 'cmp_forests',
@@ -153,11 +161,14 @@ export const MOCK_CAMPAIGNS: Campaign[] = [
     contributionCount: 142,
     backgroundImageUrl:
       '/placeholder.svg?height=600&width=960&query=ancient%20tall%20forest%20trees%20with%20sunlight%20streaming%20through',
+    campaignImages: [],
     videoLink: 'https://example.com/canopy',
     donationLink: null,
     startDate: '2025-09-01T00:00:00.000Z',
     closeDate: '2025-12-15T23:59:59.000Z',
     createdAt: '2025-09-01T08:00:00.000Z',
+    requireEmailVerification: false,
+    autoEmailOnPublish: false,
   },
 ]
 
