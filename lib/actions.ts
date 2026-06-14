@@ -349,8 +349,11 @@ export async function moderateContribution(input: {
     return { ok: false, error: "Could not update this contribution." }
   }
 
+  // Revalidate the campaign page and moderation queue
   revalidatePath("/dashboard")
   revalidatePath("/dashboard/contributions")
+  // Revalidate all dynamic campaign pages
+  revalidatePath("/campaign/[slug]")
   return { ok: true }
 }
 
@@ -451,6 +454,7 @@ export async function editContribution(input: {
     return { ok: false, error: "Could not save your edits." }
   }
 
+  revalidatePath("/campaign/[slug]")
   revalidatePath("/dashboard/contributions")
   return { ok: true }
 }
@@ -470,6 +474,8 @@ export async function deleteContribution(id: string): Promise<SubmitResult> {
     return { ok: false, error: "Could not delete this contribution." }
   }
 
+  // Revalidate campaign pages and moderation views
+  revalidatePath("/campaign/[slug]")
   revalidatePath("/dashboard/contributions")
   revalidatePath("/dashboard")
   return { ok: true }
@@ -663,6 +669,7 @@ export async function updateCampaign(
     return { ok: false, error: "Could not save changes." }
   }
 
+  revalidatePath(`/dashboard/campaigns/${id}`)
   revalidatePath("/dashboard/campaigns")
   revalidatePath("/dashboard")
   revalidatePath("/")
@@ -686,10 +693,11 @@ export async function deleteCampaign(id: string): Promise<SubmitResult> {
     return { ok: false, error: "Could not delete this campaign." }
   }
 
+  revalidatePath(`/dashboard/campaigns/${id}`)
   revalidatePath("/dashboard/campaigns")
   revalidatePath("/dashboard")
   revalidatePath("/")
-  return { ok: true }
+  return { ok: true, id }
 }
 
 export async function signOut() {
