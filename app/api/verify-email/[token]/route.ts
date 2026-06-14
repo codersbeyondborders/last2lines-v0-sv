@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { query } from "@/lib/db"
 
 /**
@@ -6,11 +6,11 @@ import { query } from "@/lib/db"
  * Called when user clicks the verification link in their email.
  */
 export async function GET(
-  request: Request,
-  { params }: { params: { token: string } },
+  request: NextRequest,
+  { params }: { params: Promise<{ token: string }> },
 ) {
   try {
-    const token = params.token
+    const { token } = await params
 
     if (!token) {
       return NextResponse.redirect(

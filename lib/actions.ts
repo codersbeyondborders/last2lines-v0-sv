@@ -675,7 +675,7 @@ export async function updateCampaign(
 }
 
 /** Permanently delete a campaign and its contributions (cascade). */
-export async function deleteCampaign(id: string): Promise<SubmitResult> {
+export async function deleteCampaign(id: string): Promise<CampaignResult> {
   try {
     await requireAdmin()
   } catch {
