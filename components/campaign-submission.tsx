@@ -124,6 +124,7 @@ function ActiveForm({ campaign }: { campaign: Campaign }) {
   const [emailVerified, setEmailVerified] = useState(false)
   const [otpStatus, setOtpStatus] = useState<OtpStatus>("idle")
   const [otpError, setOtpError] = useState<string | null>(null)
+  const [mockCode, setMockCode] = useState<string | null>(null)
   const [verseOne, setVerseOne] = useState("")
   const [verseTwo, setVerseTwo] = useState("")
   const [consent, setConsent] = useState(false)
@@ -172,6 +173,7 @@ function ActiveForm({ campaign }: { campaign: Campaign }) {
     setOtpError(null)
     setEmailVerified(false)
     setOtp("")
+    setMockCode(null)
 
     try {
       const res = await fetch("/api/send-otp", {
@@ -188,6 +190,9 @@ function ActiveForm({ campaign }: { campaign: Campaign }) {
         setOtpStatus("error")
         setOtpError(data.error ?? "Failed to send verification code.")
         return
+      }
+      if (data.mock && data.mockCode) {
+        setMockCode(data.mockCode)
       }
       setOtpStatus("sent")
     } catch {
@@ -411,6 +416,7 @@ function ActiveForm({ campaign }: { campaign: Campaign }) {
                     setEmailVerified(false)
                     setOtpStatus("idle")
                     setOtp("")
+                    setMockCode(null)
                   }
                 }}
                 onBlur={() => setTouched((t) => ({ ...t, email: true }))}
@@ -515,6 +521,15 @@ function ActiveForm({ campaign }: { campaign: Campaign }) {
                     Check your inbox for the 6-digit code. It expires in 15
                     minutes.
                   </p>
+                  {mockCode && (
+                    <p
+                      role="status"
+                      aria-live="polite"
+                      className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-mono font-semibold text-amber-800 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-300"
+                    >
+                      Dev mode — use code: {mockCode}
+                    </p>
+                  )}
                 </div>
               )}
 

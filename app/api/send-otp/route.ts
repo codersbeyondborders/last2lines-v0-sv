@@ -3,8 +3,16 @@ import { createHash, randomInt } from "crypto"
 import { nanoid } from "nanoid"
 import { query } from "@/lib/db"
 
+// ---------------------------------------------------------------------------
+// MOCK MODE — Resend domain not yet verified.
+// All OTP sends use a fixed code of 123456 and log it to the console.
+// Remove the MOCK_EMAIL flag and restore the Resend block once the sending
+// domain is verified.
+// ---------------------------------------------------------------------------
+const MOCK_EMAIL = true
+const MOCK_CODE = "123456"
+
 const RESEND_API_KEY = process.env.RESEND_API_KEY
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,11 +20,6 @@ export async function POST(request: NextRequest) {
 
     if (!email || !campaignId || !campaignTitle) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
-    }
-
-    if (!RESEND_API_KEY) {
-      console.error("[v0] RESEND_API_KEY not configured")
-      return NextResponse.json({ error: "Email service not configured" }, { status: 500 })
     }
 
     // Confirm campaign exists
@@ -35,7 +38,29 @@ export async function POST(request: NextRequest) {
       [email.toLowerCase().trim(), campaignId],
     )
 
-    // Generate a 6-digit code
+    if (MOCK_EMAIL) {
+      // In mock mode store the fixed code so verify-otp works normally.
+      const codeHash = createHash("sha256").update(MOCK_CODE).digest("hex")
+      const id = `otp_${nanoid(12)}`
+      await query(
+        `INSERT INTO email_otps (id, email, campaign_id, code_hash, expires_at)
+         VALUES ($1, $2, $3, $4, now() + interval '15 minutes')`,
+        [id, email.toLowerCase().trim(), campaignId, codeHash],
+      )
+      console.log(
+        `[v0] MOCK EMAIL — verification code for ${email}: ${MOCK_CODE}`,
+      )
+      return NextResponse.json({ ok: true, mock: true, mockCode: MOCK_CODE })
+    }
+
+    // -----------------------------------------------------------------------
+    // Real Resend path (restore when domain is verified)
+    // -----------------------------------------------------------------------
+    if (!RESEND_API_KEY) {
+      console.error("[v0] RESEND_API_KEY not configured")
+      return NextResponse.json({ error: "Email service not configured" }, { status: 500 })
+    }
+
     const code = String(randomInt(100000, 999999))
     const codeHash = createHash("sha256").update(code).digest("hex")
     const id = `otp_${nanoid(12)}`
@@ -46,7 +71,6 @@ export async function POST(request: NextRequest) {
       [id, email.toLowerCase().trim(), campaignId, codeHash],
     )
 
-    // Send the code via Resend
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -66,7 +90,7 @@ export async function POST(request: NextRequest) {
             </div>
             <p style="color:#555;">This code expires in 15&nbsp;minutes.</p>
             <p style="color:#999;font-size:12px;margin-top:24px;">
-              If you didn't request this, you can safely ignore this email.
+              If you didn&apos;t request this, you can safely ignore this email.
             </p>
           </div>
         `,
