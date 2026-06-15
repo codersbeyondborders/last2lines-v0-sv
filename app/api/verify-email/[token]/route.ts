@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { query } from "@/lib/db"
 
 /**
- * Verify email token and mark contribution as email_verified.
- * Called when user clicks the verification link in their email.
+ * Legacy magic-link verification route (kept for any outstanding links).
+ * The primary verification flow is now inline OTP via /api/send-otp + /api/verify-otp.
  */
 export async function GET(
   request: NextRequest,
@@ -16,19 +16,23 @@ export async function GET(
 
     if (!token) {
       return NextResponse.redirect(
-        new URL("/verify-email-result?error=1&message=Invalid+verification+link", base),
+        new URL(
+          "/verify-email-result?error=1&message=Invalid+verification+link",
+          base,
+        ),
       )
     }
 
-    // Find the contribution with this token
+    // Find the contribution with this token, join campaign for slug
     const { rows } = await query<{
       id: string
-      campaign_id: string
+      campaign_slug: string
       email_verified: boolean
     }>(
-      `SELECT id, campaign_id, email_verified
-         FROM contributions
-        WHERE verification_token = $1`,
+      `SELECT c.id, camp.slug AS campaign_slug, c.email_verified
+         FROM contributions c
+         JOIN campaigns camp ON camp.id = c.campaign_id
+        WHERE c.verification_token = $1`,
       [token],
     )
 
@@ -36,34 +40,41 @@ export async function GET(
 
     if (!contribution) {
       return NextResponse.redirect(
-        new URL("/verify-email-result?error=1&message=Verification+link+not+found+or+expired", base),
+        new URL(
+          "/verify-email-result?error=1&message=Verification+link+not+found+or+expired",
+          base,
+        ),
       )
     }
 
     if (contribution.email_verified) {
       return NextResponse.redirect(
-        new URL(`/verify-email-result?message=Email+already+verified&campaignId=${contribution.campaign_id}`, base),
+        new URL(
+          `/verify-email-result?message=Email+already+verified&campaignSlug=${contribution.campaign_slug}`,
+          base,
+        ),
       )
     }
 
     // Mark as verified
     await query(
-      `UPDATE contributions
-         SET email_verified = true
-       WHERE id = $1`,
+      `UPDATE contributions SET email_verified = true WHERE id = $1`,
       [contribution.id],
     )
 
     return NextResponse.redirect(
       new URL(
-        `/verify-email-result?message=Email+verified+successfully&campaignId=${contribution.campaign_id}`,
+        `/verify-email-result?message=Email+verified+successfully&campaignSlug=${contribution.campaign_slug}`,
         base,
       ),
     )
   } catch (error) {
     console.error("[v0] Email verification error:", error)
     return NextResponse.redirect(
-      new URL("/verify-email-result?error=1&message=Failed+to+verify+email", base),
+      new URL(
+        "/verify-email-result?error=1&message=Failed+to+verify+email",
+        base,
+      ),
     )
   }
 }

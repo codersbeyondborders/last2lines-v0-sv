@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 function VerificationResultContent() {
   const searchParams = useSearchParams()
   const message = searchParams.get('message') || 'Processing...'
-  const campaignId = searchParams.get('campaignId')
+  const campaignSlug = searchParams.get('campaignSlug')
   const isError = searchParams.get('error') !== null
 
   return (
@@ -34,14 +34,14 @@ function VerificationResultContent() {
           </div>
           <Button
             onClick={() => {
-              if (campaignId) {
-                window.location.href = `/campaign/${campaignId}`
+              if (campaignSlug) {
+                window.location.href = `/campaign/${campaignSlug}`
               } else {
                 window.location.href = '/'
               }
             }}
           >
-            {campaignId ? 'Back to Campaign' : 'Go Home'}
+            {campaignSlug ? 'Back to Campaign' : 'Go Home'}
           </Button>
         </CardContent>
       </Card>
@@ -51,7 +51,13 @@ function VerificationResultContent() {
 
 export default function VerificationResultPage() {
   return (
-    <Suspense fallback={<div className="flex min-h-screen items-center justify-center">Loading...</div>}>
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center">
+          Loading...
+        </div>
+      }
+    >
       <VerificationResultContent />
     </Suspense>
   )
