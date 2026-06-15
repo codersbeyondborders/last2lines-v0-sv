@@ -1,3 +1,4 @@
+import { Suspense } from "react"
 import { notFound } from "next/navigation"
 import Link from "next/link"
 import { ArrowLeft, Heart, PlayCircle } from "lucide-react"
@@ -31,6 +32,25 @@ export async function generateMetadata({
   }
 }
 
+// Streamed async component so the hero + form render before the poem arrives.
+async function PoemSection({ campaignId }: { campaignId: string }) {
+  const couplets = await getApprovedContributions(campaignId)
+  return <CampaignPoem couplets={couplets} />
+}
+
+function PoemSkeleton() {
+  return (
+    <div className="space-y-6 py-4" aria-busy="true" aria-label="Loading poem">
+      {[1, 2, 3].map((i) => (
+        <div key={i} className="space-y-2">
+          <div className="mx-auto h-4 w-2/3 animate-pulse rounded bg-muted" />
+          <div className="mx-auto h-4 w-1/2 animate-pulse rounded bg-muted" />
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export default async function CampaignPage({
   params,
 }: {
@@ -41,7 +61,10 @@ export default async function CampaignPage({
   if (!campaign) notFound()
 
   const phase = getCampaignPhase(campaign)
-  const couplets = await getApprovedContributions(campaign.id)
+  // Fetch couplets in parallel with any other data that may be added later.
+  const [couplets] = await Promise.all([
+    getApprovedContributions(campaign.id),
+  ])
   const contributors = new Set(
     couplets.map((c) => c.authorName?.trim() || c.authorId),
   ).size
@@ -217,7 +240,9 @@ export default async function CampaignPage({
                 continuous voice.
               </p>
             </div>
-            <CampaignPoem couplets={couplets} />
+            <Suspense fallback={<PoemSkeleton />}>
+              <PoemSection campaignId={campaign.id} />
+            </Suspense>
           </div>
         </section>
 

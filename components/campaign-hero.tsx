@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import type { Campaign, CampaignPhase } from "@/lib/mock-data"
 
 const PHASE_LABEL: Record<CampaignPhase, string> = {
@@ -21,11 +22,13 @@ export function CampaignHero({
       className="relative isolate overflow-hidden"
     >
       <div className="relative min-h-[24rem] w-full sm:min-h-[28rem]">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
+        <Image
           src={campaign.backgroundImageUrl || "/placeholder.svg"}
           alt=""
-          className="absolute inset-0 size-full object-cover"
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover"
         />
         {/* Dark overlay for text contrast (WCAG) */}
         <div
