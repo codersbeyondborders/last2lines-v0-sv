@@ -9,12 +9,14 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ token: string }> },
 ) {
+  const base = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin
+
   try {
     const { token } = await params
 
     if (!token) {
       return NextResponse.redirect(
-        new URL("/error?message=Invalid verification link", request.url),
+        new URL("/verify-email-result?error=1&message=Invalid+verification+link", base),
       )
     }
 
@@ -34,13 +36,13 @@ export async function GET(
 
     if (!contribution) {
       return NextResponse.redirect(
-        new URL("/error?message=Verification link not found or expired", request.url),
+        new URL("/verify-email-result?error=1&message=Verification+link+not+found+or+expired", base),
       )
     }
 
     if (contribution.email_verified) {
       return NextResponse.redirect(
-        new URL("/success?message=Email already verified", request.url),
+        new URL(`/verify-email-result?message=Email+already+verified&campaignId=${contribution.campaign_id}`, base),
       )
     }
 
@@ -54,14 +56,14 @@ export async function GET(
 
     return NextResponse.redirect(
       new URL(
-        `/success?message=Email verified successfully&campaignId=${contribution.campaign_id}`,
-        request.url,
+        `/verify-email-result?message=Email+verified+successfully&campaignId=${contribution.campaign_id}`,
+        base,
       ),
     )
   } catch (error) {
     console.error("[v0] Email verification error:", error)
     return NextResponse.redirect(
-      new URL("/error?message=Failed to verify email", request.url),
+      new URL("/verify-email-result?error=1&message=Failed+to+verify+email", base),
     )
   }
 }

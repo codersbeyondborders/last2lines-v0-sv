@@ -139,6 +139,9 @@ export async function submitContribution(input: {
     }
   }
 
+  // Track the inserted contribution id so we can send the verification email.
+  let newContributionId: string | null = null
+
   try {
     await withConnection(async (client) => {
       // Upsert the author by email.
@@ -166,6 +169,9 @@ export async function submitContribution(input: {
         ? "pending"
         : initialStatus
 
+      const contributionId = `ctr_${nanoid(12)}`
+      newContributionId = contributionId
+
       // Approved submissions (publish or curate) get the next sequence number.
       if (statusForDb === "approved") {
         await client.query(
@@ -177,7 +183,7 @@ export async function submitContribution(input: {
                         WHERE campaign_id = $2 AND status = 'approved'), 0) + 1,
              $3, $4, $5, 'approved', $6, $7)`,
           [
-            `ctr_${nanoid(12)}`,
+            contributionId,
             input.campaignId,
             finalLineOne,
             finalLineTwo,
@@ -194,7 +200,7 @@ export async function submitContribution(input: {
               status, moderation_reason, email_verified)
            VALUES ($1, $2, 0, $3, $4, $5, $6, $7, $8)`,
           [
-            `ctr_${nanoid(12)}`,
+            contributionId,
             input.campaignId,
             finalLineOne,
             finalLineTwo,
@@ -220,8 +226,8 @@ export async function submitContribution(input: {
     }
   }
 
-  // Send verification email if required
-  if (campaign.require_email_verification) {
+  // Send verification email if required (uses the real contribution id now).
+  if (campaign.require_email_verification && newContributionId) {
     try {
       await fetch(
         `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/send-verification-email`,
@@ -229,7 +235,7 @@ export async function submitContribution(input: {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            campaignId: input.campaignId,
+            contributionId: newContributionId,
             email,
             campaignTitle: campaign.title,
           }),
@@ -480,21 +486,15 @@ export async function deleteContribution(id: string): Promise<SubmitResult> {
 }
 
 /**
- * Send a publish confirmation email to a contributor.
- * Called when an approved couplet is published or when auto_email_on_publish is enabled.
+ * Internal helper: send a publish confirmation email to a contributor.
+ * Not exported as a server action — called directly from moderateContribution.
  */
-export async function sendPublishConfirmationEmail(input: {
+async function sendPublishConfirmationEmail(input: {
   contributionId: string
   authorEmail: string
   campaignTitle: string
   campaignSlug: string
 }): Promise<SubmitResult> {
-  try {
-    await requireAdmin()
-  } catch {
-    return { ok: false, error: "You must be signed in." }
-  }
-
   const RESEND_API_KEY = process.env.RESEND_API_KEY
 
   if (!RESEND_API_KEY) {
