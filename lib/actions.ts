@@ -31,6 +31,8 @@ export async function submitContribution(input: {
   lineOne: string
   lineTwo: string
   consent: boolean
+  /** True when the caller already completed the inline OTP verification step. */
+  emailVerified?: boolean
 }): Promise<SubmitResult> {
   const fullName = input.fullName?.trim()
   const email = input.email?.trim().toLowerCase()
@@ -139,9 +141,6 @@ export async function submitContribution(input: {
     }
   }
 
-  // Track the inserted contribution id so we can send the verification email.
-  let newContributionId: string | null = null
-
   try {
     await withConnection(async (client) => {
       // Upsert the author by email.
@@ -163,14 +162,15 @@ export async function submitContribution(input: {
         throw new Error("banned")
       }
 
-      // If email verification is required, insert as pending (unverified).
-      // Otherwise follow the AI moderation decision.
-      const statusForDb = campaign.require_email_verification
-        ? "pending"
-        : initialStatus
+      // If email verification is required but the OTP has NOT been verified yet,
+      // hold as pending. If OTP was already verified (inline flow), trust the
+      // AI moderation decision directly.
+      const statusForDb =
+        campaign.require_email_verification && !input.emailVerified
+          ? "pending"
+          : initialStatus
 
       const contributionId = `ctr_${nanoid(12)}`
-      newContributionId = contributionId
 
       // Approved submissions (publish or curate) get the next sequence number.
       if (statusForDb === "approved") {
@@ -189,7 +189,7 @@ export async function submitContribution(input: {
             finalLineTwo,
             author.id,
             moderationReason,
-            !campaign.require_email_verification, // Set to true if no verification required
+            !campaign.require_email_verification || Boolean(input.emailVerified), // email_verified
           ],
         )
       } else {
@@ -207,7 +207,7 @@ export async function submitContribution(input: {
             author.id,
             statusForDb,
             moderationReason,
-            false,
+            !campaign.require_email_verification || Boolean(input.emailVerified),
           ],
         )
       }
@@ -223,26 +223,6 @@ export async function submitContribution(input: {
     return {
       ok: false,
       error: "Something went wrong while saving your lines. Please try again.",
-    }
-  }
-
-  // Send verification email if required (uses the real contribution id now).
-  if (campaign.require_email_verification && newContributionId) {
-    try {
-      await fetch(
-        `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/send-verification-email`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contributionId: newContributionId,
-            email,
-            campaignTitle: campaign.title,
-          }),
-        },
-      )
-    } catch (err) {
-      console.log("[v0] Failed to send verification email:", err)
     }
   }
 
