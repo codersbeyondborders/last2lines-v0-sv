@@ -12,14 +12,15 @@ interface HomepageStatsProps {
 }
 
 // ---------------------------------------------------------------------------
-// CountUp — re-runs whenever `end` changes
+// CountUp — only animates once the parent section is visible in the viewport
 // ---------------------------------------------------------------------------
 
-function useCountUp(end: number, duration = 1100) {
+function useCountUp(end: number, visible: boolean, duration = 1100) {
   const [value, setValue] = useState(0)
   const rafRef = useRef<number | null>(null)
 
   useEffect(() => {
+    if (!visible) return
     const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches
     if (prefersReduced) { setValue(end); return }
 
@@ -33,7 +34,7 @@ function useCountUp(end: number, duration = 1100) {
     }
     rafRef.current = requestAnimationFrame(tick)
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current) }
-  }, [end, duration])
+  }, [end, visible, duration])
 
   return value
 }
@@ -53,7 +54,7 @@ function Stat({
   delay: number
   visible: boolean
 }) {
-  const count = useCountUp(value)
+  const count = useCountUp(value, visible)
 
   return (
     <div
