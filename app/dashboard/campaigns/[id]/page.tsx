@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation"
 import { PageHeader } from "@/components/admin/page-header"
 import { CampaignForm } from "@/components/admin/campaign-form"
-import { getCampaignById } from "@/lib/queries"
+import { getCampaignById, getSeedCouplets } from "@/lib/queries"
 
 export default async function EditCampaignPage({
   params,
@@ -15,13 +15,15 @@ export default async function EditCampaignPage({
     notFound()
   }
 
+  const seedCouplets = await getSeedCouplets(id)
+
   return (
     <>
       <PageHeader
         title={campaign.title}
         description="Edit this campaign's details, media, and moderation settings."
       />
-      <CampaignForm campaign={campaign} />
+      <CampaignForm campaign={campaign} seedCouplets={seedCouplets} />
     </>
   )
 }

@@ -60,7 +60,7 @@ interface SeedCouplet {
   author: string
 }
 
-export function CampaignForm({ campaign }: { campaign?: Campaign }) {
+export function CampaignForm({ campaign, seedCouplets }: { campaign?: Campaign; seedCouplets?: { lineOne: string; lineTwo: string; author: string }[] }) {
   const router = useRouter()
   const isEdit = Boolean(campaign)
 
@@ -89,7 +89,14 @@ export function CampaignForm({ campaign }: { campaign?: Campaign }) {
   const [autoEmailOnPublish, setAutoEmailOnPublish] = useState(
     campaign?.autoEmailOnPublish ?? false,
   )
-  const [seeds, setSeeds] = useState<SeedCouplet[]>([])
+  const [seeds, setSeeds] = useState<SeedCouplet[]>(
+    seedCouplets?.map((s, i) => ({
+      id: `seed_${i}`,
+      lineOne: s.lineOne,
+      lineTwo: s.lineTwo,
+      author: s.author,
+    })) ?? [],
+  )
 
   const [touched, setTouched] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -133,6 +140,11 @@ export function CampaignForm({ campaign }: { campaign?: Campaign }) {
       donationLink: donationLink.trim() || null,
       requireEmailVerification,
       autoEmailOnPublish,
+      seedCouplets: seeds.map((s) => ({
+        lineOne: s.lineOne,
+        lineTwo: s.lineTwo,
+        author: s.author,
+      })),
     }
     const result =
       isEdit && campaign

@@ -170,6 +170,29 @@ export async function getCampaignById(id: string): Promise<Campaign | null> {
   return rows[0] ? mapCampaign(rows[0]) : null
 }
 
+// Seed couplets for a campaign, ordered for display
+export interface SeedCouplet {
+  id: string
+  lineOne: string
+  lineTwo: string
+  author: string
+}
+
+export async function getSeedCouplets(
+  campaignId: string,
+): Promise<SeedCouplet[]> {
+  const { rows } = await query<SeedCouplet>(
+    `
+    SELECT id, line_one as "lineOne", line_two as "lineTwo", author
+    FROM seed_couplets
+    WHERE campaign_id = $1
+    ORDER BY sequence_number ASC
+  `,
+    [campaignId],
+  )
+  return rows
+}
+
 // ----------------------------------------------------------------------------
 // Contribution queries
 // ----------------------------------------------------------------------------
