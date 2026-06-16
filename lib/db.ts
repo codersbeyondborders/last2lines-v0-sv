@@ -21,7 +21,13 @@ const pool = new Pool({
   user: process.env.PGUSER || 'postgres',
   password: () => signer.getAuthToken(),
   ssl: { rejectUnauthorized: false },
-  max: 20,
+  // Keep pool small for serverless: each Vercel function invocation spins its
+  // own pool. Aurora's max_connections is finite (e.g. ~170 on db.t3.medium).
+  // With RDS Proxy in front (recommended for production), the proxy multiplexes
+  // connections so a low client-side max does not limit throughput.
+  max: 5,
+  idleTimeoutMillis: 10_000,
+  connectionTimeoutMillis: 5_000,
 })
 attachDatabasePool(pool)
 
