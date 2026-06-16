@@ -318,8 +318,8 @@ export async function moderateContribution(input: {
               campaignTitle: campaign.title,
               campaignSlug: campaign.slug,
             })
-          } catch (err) {
-            console.log("[v0] Failed to send publish email:", err)
+          } catch {
+            // non-fatal — contribution is approved regardless of email failure
           }
         }
       } else {
@@ -332,8 +332,7 @@ export async function moderateContribution(input: {
         )
       }
     })
-  } catch (err) {
-    console.log("[v0] moderateContribution error:", err)
+  } catch {
     return { ok: false, error: "Could not update this contribution." }
   }
 
