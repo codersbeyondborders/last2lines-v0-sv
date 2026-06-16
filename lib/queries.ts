@@ -4,8 +4,41 @@ import type {
   Author,
   Campaign,
   Contribution,
+  ContributionStatus,
   ModerationSettings,
 } from "@/lib/mock-data"
+
+// ----------------------------------------------------------------------------
+// Pagination helpers
+// ----------------------------------------------------------------------------
+
+const PAGE_SIZE = 50
+
+export interface PagedResult<T> {
+  items: T[]
+  nextCursor: string | null
+  total?: number
+}
+
+function encodeCursor(createdAt: Date | string, id: string): string {
+  const iso =
+    createdAt instanceof Date ? createdAt.toISOString() : createdAt
+  return Buffer.from(`${iso}|${id}`).toString("base64url")
+}
+
+function decodeCursor(cursor: string): { createdAt: string; id: string } | null {
+  try {
+    const decoded = Buffer.from(cursor, "base64url").toString("utf-8")
+    const pipeIdx = decoded.lastIndexOf("|")
+    if (pipeIdx === -1) return null
+    return {
+      createdAt: decoded.slice(0, pipeIdx),
+      id: decoded.slice(pipeIdx + 1),
+    }
+  } catch {
+    return null
+  }
+}
 
 // ----------------------------------------------------------------------------
 // Row types (snake_case as returned by Postgres) + mappers to app shapes.
@@ -114,12 +147,23 @@ function mapAuthor(row: AuthorRow): Author {
   }
 }
 
+// Shared SELECT fragment — used in all contribution queries.
 const CONTRIBUTION_SELECT = `
   SELECT c.id, c.campaign_id, c.sequence_number, c.line_one, c.line_two,
          c.author_id, a.name AS author_name, a.email AS author_email,
          a.country, c.status, c.moderation_reason, c.created_at
   FROM contributions c
   JOIN authors a ON a.id = c.author_id
+`
+
+// Shared LEFT JOIN aggregate for contribution_count — avoids correlated subquery.
+const CAMPAIGN_COUNT_JOIN = `
+  LEFT JOIN (
+    SELECT campaign_id, COUNT(*) AS contribution_count
+    FROM contributions
+    WHERE status = 'approved'
+    GROUP BY campaign_id
+  ) ct ON ct.campaign_id = c.id
 `
 
 // ----------------------------------------------------------------------------
@@ -129,10 +173,9 @@ const CONTRIBUTION_SELECT = `
 /** All campaigns with their approved couplet counts, newest first. */
 export async function getCampaigns(): Promise<Campaign[]> {
   const { rows } = await query<CampaignRow>(`
-    SELECT c.*,
-      (SELECT count(*) FROM contributions ct
-        WHERE ct.campaign_id = c.id AND ct.status = 'approved') AS contribution_count
+    SELECT c.*, COALESCE(ct.contribution_count, 0) AS contribution_count
     FROM campaigns c
+    ${CAMPAIGN_COUNT_JOIN}
     ORDER BY c.created_at DESC
   `)
   return rows.map(mapCampaign)
@@ -143,13 +186,12 @@ export async function getCampaignBySlug(
 ): Promise<Campaign | null> {
   const { rows } = await query<CampaignRow>(
     `
-    SELECT c.*,
-      (SELECT count(*) FROM contributions ct
-        WHERE ct.campaign_id = c.id AND ct.status = 'approved') AS contribution_count
+    SELECT c.*, COALESCE(ct.contribution_count, 0) AS contribution_count
     FROM campaigns c
+    ${CAMPAIGN_COUNT_JOIN}
     WHERE c.slug = $1
     LIMIT 1
-  `,
+    `,
     [slug],
   )
   return rows[0] ? mapCampaign(rows[0]) : null
@@ -158,19 +200,18 @@ export async function getCampaignBySlug(
 export async function getCampaignById(id: string): Promise<Campaign | null> {
   const { rows } = await query<CampaignRow>(
     `
-    SELECT c.*,
-      (SELECT count(*) FROM contributions ct
-        WHERE ct.campaign_id = c.id AND ct.status = 'approved') AS contribution_count
+    SELECT c.*, COALESCE(ct.contribution_count, 0) AS contribution_count
     FROM campaigns c
+    ${CAMPAIGN_COUNT_JOIN}
     WHERE c.id = $1
     LIMIT 1
-  `,
+    `,
     [id],
   )
   return rows[0] ? mapCampaign(rows[0]) : null
 }
 
-// Seed couplets for a campaign, ordered for display
+// Seed couplets for a campaign, ordered for display.
 export interface SeedCouplet {
   id: string
   lineOne: string
@@ -183,11 +224,11 @@ export async function getSeedCouplets(
 ): Promise<SeedCouplet[]> {
   const { rows } = await query<SeedCouplet>(
     `
-    SELECT id, line_one as "lineOne", line_two as "lineTwo", author
+    SELECT id, line_one AS "lineOne", line_two AS "lineTwo", author
     FROM seed_couplets
     WHERE campaign_id = $1
     ORDER BY sequence_number ASC
-  `,
+    `,
     [campaignId],
   )
   return rows
@@ -197,7 +238,7 @@ export async function getSeedCouplets(
 // Contribution queries
 // ----------------------------------------------------------------------------
 
-/** Approved couplets for a campaign, ordered for display in the poem. */
+/** Approved couplets for a campaign, ordered for poem display. */
 export async function getApprovedContributions(
   campaignId: string,
 ): Promise<Contribution[]> {
@@ -210,33 +251,187 @@ export async function getApprovedContributions(
   return rows.map(mapContribution)
 }
 
-/** Every contribution (all statuses), newest first — for the moderation queue. */
-export async function getAllContributions(): Promise<Contribution[]> {
-  const { rows } = await query<ContributionRow>(
-    `${CONTRIBUTION_SELECT} ORDER BY c.created_at DESC`,
-  )
-  return rows.map(mapContribution)
+export interface GetContributionsOptions {
+  /** Default 50. */
+  limit?: number
+  /** Opaque cursor from a previous PagedResult. */
+  cursor?: string | null
+  /** Omit or pass 'all' to return all statuses. */
+  status?: ContributionStatus | "all"
+  /** Filter by a specific author. */
+  authorId?: string | null
+  /** Filter by a specific campaign. */
+  campaignId?: string | null
 }
 
+/**
+ * Paginated contributions for the admin moderation queue.
+ * Uses keyset (cursor) pagination on (created_at DESC, id DESC) to avoid
+ * OFFSET degradation on large tables.
+ */
+export async function getAllContributions(
+  opts: GetContributionsOptions = {},
+): Promise<PagedResult<Contribution>> {
+  const limit = Math.min(opts.limit ?? PAGE_SIZE, 200)
+  const conditions: string[] = []
+  const params: unknown[] = []
+
+  if (opts.status && opts.status !== "all") {
+    params.push(opts.status)
+    conditions.push(`c.status = $${params.length}`)
+  }
+
+  if (opts.authorId) {
+    params.push(opts.authorId)
+    conditions.push(`c.author_id = $${params.length}`)
+  }
+
+  if (opts.campaignId) {
+    params.push(opts.campaignId)
+    conditions.push(`c.campaign_id = $${params.length}`)
+  }
+
+  // Keyset cursor: skip rows older than (or equal to) the previous last row.
+  if (opts.cursor) {
+    const decoded = decodeCursor(opts.cursor)
+    if (decoded) {
+      params.push(decoded.createdAt, decoded.id)
+      const tsParam = `$${params.length - 1}`
+      const idParam = `$${params.length}`
+      conditions.push(`(c.created_at, c.id) < (${tsParam}, ${idParam})`)
+    }
+  }
+
+  const whereClause =
+    conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : ""
+
+  // Fetch one extra row to determine whether a next page exists.
+  params.push(limit + 1)
+  const { rows } = await query<ContributionRow>(
+    `${CONTRIBUTION_SELECT}
+     ${whereClause}
+     ORDER BY c.created_at DESC, c.id DESC
+     LIMIT $${params.length}`,
+    params,
+  )
+
+  const hasMore = rows.length > limit
+  const items = hasMore ? rows.slice(0, limit) : rows
+  const lastItem = items[items.length - 1]
+
+  return {
+    items: items.map(mapContribution),
+    nextCursor:
+      hasMore && lastItem
+        ? encodeCursor(lastItem.created_at, lastItem.id)
+        : null,
+  }
+}
+
+/** Counts per status for the moderation queue filter tabs. */
+export interface ContributionStatusCounts {
+  all: number
+  pending: number
+  approved: number
+  rejected: number
+}
+
+export async function getContributionStatusCounts(opts?: {
+  authorId?: string | null
+  campaignId?: string | null
+}): Promise<ContributionStatusCounts> {
+  const conditions: string[] = []
+  const params: unknown[] = []
+
+  if (opts?.authorId) {
+    params.push(opts.authorId)
+    conditions.push(`author_id = $${params.length}`)
+  }
+  if (opts?.campaignId) {
+    params.push(opts.campaignId)
+    conditions.push(`campaign_id = $${params.length}`)
+  }
+
+  const whereClause =
+    conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : ""
+
+  const { rows } = await query<{
+    all: string
+    pending: string
+    approved: string
+    rejected: string
+  }>(`
+    SELECT
+      COUNT(*) AS all,
+      COUNT(*) FILTER (WHERE status = 'pending')  AS pending,
+      COUNT(*) FILTER (WHERE status = 'approved') AS approved,
+      COUNT(*) FILTER (WHERE status = 'rejected') AS rejected
+    FROM contributions
+    ${whereClause}
+  `, params)
+
+  const r = rows[0]
+  return {
+    all: Number(r.all),
+    pending: Number(r.pending),
+    approved: Number(r.approved),
+    rejected: Number(r.rejected),
+  }
+}
+
+/** @deprecated Use getAllContributions({ status }) instead. */
 export async function getContributionsByStatus(
   status: Contribution["status"],
 ): Promise<Contribution[]> {
-  const { rows } = await query<ContributionRow>(
-    `${CONTRIBUTION_SELECT} WHERE c.status = $1 ORDER BY c.created_at DESC`,
-    [status],
-  )
-  return rows.map(mapContribution)
+  const { items } = await getAllContributions({ status, limit: 200 })
+  return items
 }
 
 // ----------------------------------------------------------------------------
-// Author + settings queries
+// Author queries
 // ----------------------------------------------------------------------------
 
-export async function getAuthors(): Promise<Author[]> {
+export interface GetAuthorsOptions {
+  limit?: number
+  cursor?: string | null
+}
+
+/** Paginated authors list, newest first. */
+export async function getAuthors(
+  opts: GetAuthorsOptions = {},
+): Promise<PagedResult<Author>> {
+  const limit = Math.min(opts.limit ?? PAGE_SIZE, 200)
+  const params: unknown[] = []
+  let cursorClause = ""
+
+  if (opts.cursor) {
+    const decoded = decodeCursor(opts.cursor)
+    if (decoded) {
+      params.push(decoded.createdAt, decoded.id)
+      cursorClause = `WHERE (joined_at, id) < ($1, $2)`
+    }
+  }
+
+  params.push(limit + 1)
   const { rows } = await query<AuthorRow>(
-    `SELECT * FROM authors ORDER BY joined_at DESC`,
+    `SELECT * FROM authors
+     ${cursorClause}
+     ORDER BY joined_at DESC, id DESC
+     LIMIT $${params.length}`,
+    params,
   )
-  return rows.map(mapAuthor)
+
+  const hasMore = rows.length > limit
+  const items = hasMore ? rows.slice(0, limit) : rows
+  const lastItem = items[items.length - 1]
+
+  return {
+    items: items.map(mapAuthor),
+    nextCursor:
+      hasMore && lastItem
+        ? encodeCursor(lastItem.joined_at, lastItem.id)
+        : null,
+  }
 }
 
 /** Map of author id -> total submission count (all statuses). */
@@ -295,14 +490,15 @@ export interface HomepageStats {
 }
 
 export async function getHomepageStats(): Promise<HomepageStats> {
+  // Single round-trip: merge all scalar aggregates into one query.
   const { rows: agg } = await query<{
     total_campaigns: string
     total_authors: string
     total_lines: string
   }>(`
     SELECT
-      (SELECT count(*) FROM campaigns WHERE status != 'draft') AS total_campaigns,
-      (SELECT count(*) FROM authors WHERE status = 'active') AS total_authors,
+      (SELECT count(*) FROM campaigns     WHERE status != 'draft')   AS total_campaigns,
+      (SELECT count(*) FROM authors       WHERE status = 'active')   AS total_authors,
       (SELECT count(*) * 2 FROM contributions WHERE status = 'approved') AS total_lines
   `)
 
@@ -320,12 +516,14 @@ export async function getHomepageStats(): Promise<HomepageStats> {
       c.slug,
       c.status,
       COUNT(DISTINCT ct.author_id) AS authors,
-      COUNT(ct.id) * 2 AS lines
+      COUNT(ct.id) * 2             AS lines
     FROM campaigns c
-    LEFT JOIN contributions ct ON ct.campaign_id = c.id AND ct.status = 'approved'
+    LEFT JOIN contributions ct
+      ON ct.campaign_id = c.id AND ct.status = 'approved'
     WHERE c.status != 'draft'
-    GROUP BY c.id
+    GROUP BY c.id, c.title, c.slug, c.status
     ORDER BY c.created_at DESC
+    LIMIT 20
   `)
 
   const r = agg[0]
@@ -367,12 +565,12 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
     banned_count: string
   }>(`
     SELECT
-      (SELECT count(*) FROM campaigns) AS total_campaigns,
+      (SELECT count(*) FROM campaigns)                          AS total_campaigns,
       (SELECT count(*) FROM campaigns WHERE status = 'active') AS active_campaigns,
-      (SELECT count(*) FROM contributions WHERE status = 'pending') AS pending_count,
+      (SELECT count(*) FROM contributions WHERE status = 'pending')  AS pending_count,
       (SELECT count(*) FROM contributions WHERE status = 'approved') AS approved_count,
-      (SELECT count(*) FROM authors) AS author_count,
-      (SELECT count(*) FROM authors WHERE status = 'banned') AS banned_count
+      (SELECT count(*) FROM authors)                           AS author_count,
+      (SELECT count(*) FROM authors WHERE status = 'banned')   AS banned_count
   `)
   const r = rows[0]
   return {
@@ -390,40 +588,35 @@ export async function getContributionsByCountry(
 ): Promise<Array<{ country: string; count: number; percentage: number }>> {
   "use server"
 
-  let sql = `
-    SELECT 
+  const params: unknown[] = []
+  let campaignClause = ""
+  if (campaignId) {
+    params.push(campaignId)
+    campaignClause = `AND c.campaign_id = $${params.length}`
+  }
+
+  const result = await query<{ country: string | null; count: string }>(
+    `
+    SELECT
       a.country,
-      COUNT(c.id) as count
+      COUNT(c.id) AS count
     FROM contributions c
     JOIN authors a ON c.author_id = a.id
     WHERE c.status = 'approved'
-  `
+    ${campaignClause}
+    GROUP BY a.country
+    ORDER BY count DESC
+    `,
+    params,
+  )
 
-  const params: unknown[] = []
-
-  if (campaignId) {
-    sql += ` AND c.campaign_id = $1`
-    params.push(campaignId)
-  }
-
-  sql += ` GROUP BY a.country
-          ORDER BY count DESC`
-
-  const result = await query<{
-    country: string | null
-    count: string
-  }>(sql, params)
-
-  const rows = result.rows || []
-
-  // Calculate total
+  const rows = result.rows ?? []
   const total = rows.reduce((sum, row) => sum + parseInt(row.count, 10), 0)
 
-  // Filter out null countries and calculate percentages
   return rows
     .filter((row) => row.country && row.country.trim() !== "")
     .map((row) => ({
-      country: row.country || "Unknown",
+      country: row.country ?? "Unknown",
       count: parseInt(row.count, 10),
       percentage: total > 0 ? (parseInt(row.count, 10) / total) * 100 : 0,
     }))

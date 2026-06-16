@@ -40,20 +40,25 @@ async function PoemSection({ campaignId }: { campaignId: string }) {
     getSeedCouplets(campaignId),
   ])
   
-  // Combine seed couplets and contributions, seeds first
+  // Combine seed couplets and contributions, seeds first.
+  // Seed couplets must satisfy the full Contribution shape required by CampaignPoem.
   const combinedCouplets = [
-    ...seedCouplets.map((seed) => ({
+    ...seedCouplets.map((seed, i) => ({
       id: seed.id,
+      campaignId,
+      sequenceNumber: i + 1,
       lineOne: seed.lineOne,
       lineTwo: seed.lineTwo,
+      authorId: "seed",
       authorName: seed.author,
+      authorEmail: "",
       country: null,
+      status: "approved" as const,
+      moderationReason: null,
+      createdAt: new Date(0).toISOString(),
       isSeed: true,
     })),
-    ...contributions.map((c) => ({
-      ...c,
-      isSeed: false,
-    })),
+    ...contributions.map((c) => ({ ...c, isSeed: false })),
   ]
   
   return <CampaignPoem couplets={combinedCouplets} />

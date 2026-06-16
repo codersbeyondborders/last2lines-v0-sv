@@ -1,6 +1,7 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useCallback, useState, useTransition } from "react"
+import { useRouter, useSearchParams, usePathname } from "next/navigation"
 import {
   Check,
   X,
@@ -9,6 +10,7 @@ import {
   Loader2,
   MoreHorizontal,
   AlertCircle,
+  ChevronDown,
 } from "lucide-react"
 import {
   type Contribution,
@@ -18,7 +20,9 @@ import {
   moderateContribution,
   editContribution,
   deleteContribution,
+  fetchContributionsPage,
 } from "@/lib/actions"
+import type { ContributionStatusCounts, GetContributionsOptions } from "@/lib/queries"
 import {
   Table,
   TableBody,
@@ -52,45 +56,78 @@ const FILTERS: { key: FilterKey; label: string }[] = [
 
 const CAMPAIGN_TITLE_FALLBACK = "—"
 
+interface ContributionsTableProps {
+  initialContributions: Contribution[]
+  /** Opaque cursor for the next page, or null when all rows are loaded. */
+  initialNextCursor: string | null
+  /** Accurate per-status counts from the server (not computed from loaded items). */
+  statusCounts: ContributionStatusCounts
+  campaignTitles: Record<string, string>
+  /** When set the table is scoped to one author (passed through to load-more). */
+  authorId?: string
+  /** Active status filter applied server-side (from URL param). */
+  currentStatus?: FilterKey
+}
+
 export function ContributionsTable({
   initialContributions,
+  initialNextCursor,
+  statusCounts,
   campaignTitles,
   authorId,
-}: {
-  initialContributions: Contribution[]
-  campaignTitles: Record<string, string>
-  authorId?: string
-}) {
+  currentStatus = "all",
+}: ContributionsTableProps) {
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+
   const [items, setItems] = useState<Contribution[]>(initialContributions)
-  const [filter, setFilter] = useState<FilterKey>("all")
+  const [nextCursor, setNextCursor] = useState<string | null>(initialNextCursor)
   const [actingId, setActingId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [loadingMore, startLoadMore] = useTransition()
+
   // Inline edit state.
   const [editing, setEditing] = useState<Contribution | null>(null)
   const [editLineOne, setEditLineOne] = useState("")
   const [editLineTwo, setEditLineTwo] = useState("")
 
-  const counts = useMemo(() => {
-    const base = authorId
-      ? items.filter((c) => c.authorId === authorId)
-      : items
-    return {
-      all: base.length,
-      pending: base.filter((c) => c.status === "pending").length,
-      approved: base.filter((c) => c.status === "approved").length,
-      rejected: base.filter((c) => c.status === "rejected").length,
+  // -------------------------------------------------------------------------
+  // Filter tab navigation — changes URL, which triggers a full server re-fetch
+  // so counts and items are always accurate.
+  // -------------------------------------------------------------------------
+  function navigateFilter(key: FilterKey) {
+    const params = new URLSearchParams(searchParams.toString())
+    // Remove cursor when changing filters — start at the first page.
+    params.delete("cursor")
+    if (key === "all") {
+      params.delete("status")
+    } else {
+      params.set("status", key)
     }
-  }, [items, authorId])
+    router.push(`${pathname}?${params.toString()}`)
+  }
 
-  const visible = useMemo(() => {
-    let base = authorId ? items.filter((c) => c.authorId === authorId) : items
-    if (filter !== "all") base = base.filter((c) => c.status === filter)
-    return [...base].sort(
-      (a, b) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-    )
-  }, [items, filter, authorId])
+  // -------------------------------------------------------------------------
+  // Load more — appends the next page of items without a full navigation.
+  // -------------------------------------------------------------------------
+  const loadMore = useCallback(() => {
+    if (!nextCursor) return
+    startLoadMore(async () => {
+      const opts: GetContributionsOptions = {
+        cursor: nextCursor,
+        ...(currentStatus !== "all" && { status: currentStatus }),
+        ...(authorId && { authorId }),
+      }
+      const result = await fetchContributionsPage(opts)
+      setItems((prev) => [...prev, ...result.items])
+      setNextCursor(result.nextCursor)
+    })
+  }, [nextCursor, currentStatus, authorId])
 
+  // -------------------------------------------------------------------------
+  // Moderation + delete — optimistic updates.
+  // -------------------------------------------------------------------------
   async function moderate(
     id: string,
     status: ContributionStatus,
@@ -99,7 +136,6 @@ export function ContributionsTable({
     setError(null)
     setActingId(id)
     const previous = items
-    // Optimistic update for instant feedback.
     setItems((prev) =>
       prev.map((c) =>
         c.id === id ? { ...c, status, moderationReason: reason } : c,
@@ -149,21 +185,21 @@ export function ContributionsTable({
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Filters */}
+      {/* Filter tabs */}
       <div
         role="tablist"
-        aria-label="Filter contributions by AI status"
+        aria-label="Filter contributions by status"
         className="flex flex-wrap items-center gap-2"
       >
         {FILTERS.map((f) => {
-          const active = filter === f.key
+          const active = currentStatus === f.key
           return (
             <button
               key={f.key}
               type="button"
               role="tab"
               aria-selected={active}
-              onClick={() => setFilter(f.key)}
+              onClick={() => navigateFilter(f.key)}
               className={cn(
                 "inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                 active
@@ -180,7 +216,7 @@ export function ContributionsTable({
                     : "bg-muted text-muted-foreground",
                 )}
               >
-                {counts[f.key]}
+                {statusCounts[f.key]}
               </span>
             </button>
           )
@@ -198,7 +234,7 @@ export function ContributionsTable({
         </div>
       ) : null}
 
-      {visible.length === 0 ? (
+      {items.length === 0 ? (
         <Card className="p-10 text-center text-muted-foreground">
           No contributions match this view.
         </Card>
@@ -211,7 +247,7 @@ export function ContributionsTable({
                 <TableHead>Campaign</TableHead>
                 <TableHead>Author</TableHead>
                 <TableHead className="min-w-64">Couplet</TableHead>
-                <TableHead>AI Status</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead className="min-w-40">AI Feedback</TableHead>
                 <TableHead className="w-12 text-right">
                   <span className="sr-only">Actions</span>
@@ -219,7 +255,7 @@ export function ContributionsTable({
               </TableRow>
             </TableHeader>
             <TableBody aria-live="polite">
-              {visible.map((c) => (
+              {items.map((c) => (
                 <TableRow key={c.id}>
                   <TableCell className="text-right tabular-nums text-muted-foreground">
                     {c.sequenceNumber || "—"}
@@ -319,6 +355,31 @@ export function ContributionsTable({
           </Table>
         </Card>
       )}
+
+      {/* Load more */}
+      {nextCursor ? (
+        <div className="flex items-center justify-center pt-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={loadMore}
+            disabled={loadingMore}
+            aria-live="polite"
+          >
+            {loadingMore ? (
+              <>
+                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                Loading…
+              </>
+            ) : (
+              <>
+                <ChevronDown className="size-4" aria-hidden="true" />
+                Load more
+              </>
+            )}
+          </Button>
+        </div>
+      ) : null}
 
       {/* Inline edit panel */}
       {editing ? (

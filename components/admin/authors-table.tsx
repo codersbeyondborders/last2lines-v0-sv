@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useCallback, useState, useTransition } from "react"
 import Link from "next/link"
 import {
   Ban,
@@ -8,9 +8,12 @@ import {
   FileText,
   MoreHorizontal,
   AlertCircle,
+  Loader2,
+  ChevronDown,
 } from "lucide-react"
 import { type Author } from "@/lib/mock-data"
-import { setAuthorStatus } from "@/lib/actions"
+import { setAuthorStatus, fetchAuthorsPage } from "@/lib/actions"
+import type { GetAuthorsOptions } from "@/lib/queries"
 import {
   Table,
   TableBody,
@@ -42,13 +45,27 @@ const SUBMISSION_COUNT_FALLBACK = 0
 
 export function AuthorsTable({
   initialAuthors,
+  initialNextCursor,
   submissionCounts,
 }: {
   initialAuthors: Author[]
+  initialNextCursor: string | null
   submissionCounts: Record<string, number>
 }) {
   const [authors, setAuthors] = useState<Author[]>(initialAuthors)
+  const [nextCursor, setNextCursor] = useState<string | null>(initialNextCursor)
   const [error, setError] = useState<string | null>(null)
+  const [loadingMore, startLoadMore] = useTransition()
+
+  const loadMore = useCallback(() => {
+    if (!nextCursor) return
+    startLoadMore(async () => {
+      const opts: GetAuthorsOptions = { cursor: nextCursor }
+      const result = await fetchAuthorsPage(opts)
+      setAuthors((prev) => [...prev, ...result.items])
+      setNextCursor(result.nextCursor)
+    })
+  }, [nextCursor])
 
   async function setStatus(id: string, status: Author["status"]) {
     setError(null)
@@ -123,7 +140,7 @@ export function AuthorsTable({
                         <Button
                           variant="ghost"
                           size="icon"
-                          aria-label={`Actions for ${a.name}`}
+                          aria-label={`Actions for ${a.name ?? "anonymous"}`}
                         >
                           <MoreHorizontal
                             className="size-4"
@@ -171,6 +188,30 @@ export function AuthorsTable({
           </TableBody>
         </Table>
       </Card>
+
+      {nextCursor ? (
+        <div className="flex items-center justify-center pt-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={loadMore}
+            disabled={loadingMore}
+            aria-live="polite"
+          >
+            {loadingMore ? (
+              <>
+                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                Loading&hellip;
+              </>
+            ) : (
+              <>
+                <ChevronDown className="size-4" aria-hidden="true" />
+                Load more
+              </>
+            )}
+          </Button>
+        </div>
+      ) : null}
     </div>
   )
 }

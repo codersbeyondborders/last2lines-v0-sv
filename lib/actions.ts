@@ -7,6 +7,14 @@ import { createClient } from "@/lib/supabase/server"
 import { moderateCouplet } from "@/lib/ai-moderation"
 import type { Contribution } from "@/lib/mock-data"
 import type { CampaignInput, CampaignResult } from "@/lib/actions-types"
+import {
+  getAllContributions,
+  getAuthors,
+  type GetContributionsOptions,
+  type GetAuthorsOptions,
+  type PagedResult,
+} from "@/lib/queries"
+import type { Author } from "@/lib/mock-data"
 
 const VERSE_MAX = 100
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -262,35 +270,31 @@ export async function moderateContribution(input: {
 
   try {
     await withConnection(async (client) => {
+      // Single JOIN fetches contribution + campaign + author data in one round-trip.
       const { rows } = await client.query<{
         campaign_id: string
         author_id: string
-      }>(
-        `SELECT campaign_id, author_id FROM contributions WHERE id = $1`,
-        [input.id],
-      )
-      const contribution = rows[0]
-      if (!contribution) throw new Error("not found")
-
-      // Get campaign info for email sending
-      const { rows: campaignRows } = await client.query<{
         slug: string
         title: string
         auto_email_on_publish: boolean
+        author_email: string
       }>(
-        `SELECT slug, title, auto_email_on_publish FROM campaigns WHERE id = $1`,
-        [contribution.campaign_id],
+        `SELECT c.campaign_id, c.author_id,
+                ca.slug, ca.title, ca.auto_email_on_publish,
+                a.email AS author_email
+         FROM contributions c
+         JOIN campaigns ca ON ca.id = c.campaign_id
+         JOIN authors   a  ON a.id  = c.author_id
+         WHERE c.id = $1`,
+        [input.id],
       )
-      const campaign = campaignRows[0]
+      const row = rows[0]
+      if (!row) throw new Error("not found")
 
-      // Get author email for sending publish confirmation
-      const { rows: authorRows } = await client.query<{
-        email: string
-      }>(
-        `SELECT email FROM authors WHERE id = $1`,
-        [contribution.author_id],
-      )
-      const author = authorRows[0]
+      // Map to named locals so the rest of the function reads clearly.
+      const contribution = { campaign_id: row.campaign_id, author_id: row.author_id }
+      const campaign = { slug: row.slug, title: row.title, auto_email_on_publish: row.auto_email_on_publish }
+      const author = { email: row.author_email }
 
       if (input.status === "approved") {
         // Assign the next sequence number for this campaign's poem.
@@ -314,8 +318,8 @@ export async function moderateContribution(input: {
               campaignTitle: campaign.title,
               campaignSlug: campaign.slug,
             })
-          } catch (err) {
-            console.log("[v0] Failed to send publish email:", err)
+          } catch {
+            // non-fatal — contribution is approved regardless of email failure
           }
         }
       } else {
@@ -328,8 +332,7 @@ export async function moderateContribution(input: {
         )
       }
     })
-  } catch (err) {
-    console.log("[v0] moderateContribution error:", err)
+  } catch {
     return { ok: false, error: "Could not update this contribution." }
   }
 
@@ -697,8 +700,8 @@ export async function deleteCampaign(id: string): Promise<CampaignResult> {
   }
 
   try {
-    await query(`DELETE FROM contributions WHERE campaign_id = $1`, [id])
-    await query(`DELETE FROM moderation_settings WHERE campaign_id = $1`, [id])
+    // Child tables (contributions, moderation_settings, seed_couplets, email_otps)
+    // all carry ON DELETE CASCADE — a single parent delete is sufficient.
     await query(`DELETE FROM campaigns WHERE id = $1`, [id])
   } catch (err) {
     console.log("[v0] deleteCampaign error:", err)
@@ -710,6 +713,25 @@ export async function deleteCampaign(id: string): Promise<CampaignResult> {
   revalidatePath("/dashboard")
   revalidatePath("/")
   return { ok: true, id }
+}
+
+// ----------------------------------------------------------------------------
+// Pagination server actions — thin wrappers so client components can call
+// server-only query functions directly.
+// ----------------------------------------------------------------------------
+
+/** Fetch a page of contributions. Called by ContributionsTable "Load more". */
+export async function fetchContributionsPage(
+  opts: GetContributionsOptions,
+): Promise<PagedResult<Contribution>> {
+  return getAllContributions(opts)
+}
+
+/** Fetch a page of authors. Called by AuthorsTable "Load more". */
+export async function fetchAuthorsPage(
+  opts: GetAuthorsOptions,
+): Promise<PagedResult<Author>> {
+  return getAuthors(opts)
 }
 
 export async function signOut() {
