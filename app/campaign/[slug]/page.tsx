@@ -12,6 +12,7 @@ import { getCampaignPhase, formatCampaignDate } from "@/lib/mock-data"
 import {
   getCampaignBySlug,
   getApprovedContributions,
+  getSeedCouplets,
 } from "@/lib/queries"
 
 // Campaign content is live and DB-backed, so render on demand rather than
@@ -34,8 +35,28 @@ export async function generateMetadata({
 
 // Streamed async component so the hero + form render before the poem arrives.
 async function PoemSection({ campaignId }: { campaignId: string }) {
-  const couplets = await getApprovedContributions(campaignId)
-  return <CampaignPoem couplets={couplets} />
+  const [contributions, seedCouplets] = await Promise.all([
+    getApprovedContributions(campaignId),
+    getSeedCouplets(campaignId),
+  ])
+  
+  // Combine seed couplets and contributions, seeds first
+  const combinedCouplets = [
+    ...seedCouplets.map((seed) => ({
+      id: seed.id,
+      lineOne: seed.lineOne,
+      lineTwo: seed.lineTwo,
+      authorName: seed.author,
+      country: null,
+      isSeed: true,
+    })),
+    ...contributions.map((c) => ({
+      ...c,
+      isSeed: false,
+    })),
+  ]
+  
+  return <CampaignPoem couplets={combinedCouplets} />
 }
 
 function PoemSkeleton() {
@@ -62,16 +83,18 @@ export default async function CampaignPage({
 
   const phase = getCampaignPhase(campaign)
   // Fetch couplets in parallel with any other data that may be added later.
-  const [couplets] = await Promise.all([
+  const [contributions, seedCouplets] = await Promise.all([
     getApprovedContributions(campaign.id),
+    getSeedCouplets(campaign.id),
   ])
+  const allCouplets = [...seedCouplets, ...contributions]
   const contributors = new Set(
-    couplets.map((c) => c.authorName?.trim() || c.authorId),
+    contributions.map((c) => c.authorName?.trim() || c.authorId),
   ).size
   const stats = {
-    contributors: Math.max(contributors, couplets.length > 0 ? 1 : 0),
-    couplets: couplets.length,
-    lines: couplets.length * 2,
+    contributors: Math.max(contributors, contributions.length > 0 ? 1 : 0),
+    couplets: allCouplets.length,
+    lines: allCouplets.length * 2,
   }
 
   const statItems = [
