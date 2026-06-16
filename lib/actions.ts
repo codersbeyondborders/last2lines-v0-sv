@@ -593,6 +593,19 @@ export async function createCampaign(
         input.autoEmailOnPublish,
       ],
     )
+
+    // Insert seed couplets if provided
+    if (input.seedCouplets && input.seedCouplets.length > 0) {
+      for (let i = 0; i < input.seedCouplets.length; i++) {
+        const seed = input.seedCouplets[i]
+        const seedId = `seed_${nanoid(12)}`
+        await query(
+          `INSERT INTO seed_couplets (id, campaign_id, sequence_number, line_one, line_two, author, created_at)
+           VALUES ($1, $2, $3, $4, $5, $6, now())`,
+          [seedId, id, i, seed.lineOne.trim(), seed.lineTwo.trim(), seed.author.trim()],
+        )
+      }
+    }
   } catch (err) {
     console.log("[v0] createCampaign error:", err)
     return { ok: false, error: "Could not create this campaign." }
@@ -642,6 +655,23 @@ export async function updateCampaign(
         input.autoEmailOnPublish,
       ],
     )
+
+    // Update seed couplets
+    // Delete existing seed couplets for this campaign
+    await query(`DELETE FROM seed_couplets WHERE campaign_id = $1`, [id])
+
+    // Insert new seed couplets if provided
+    if (input.seedCouplets && input.seedCouplets.length > 0) {
+      for (let i = 0; i < input.seedCouplets.length; i++) {
+        const seed = input.seedCouplets[i]
+        const seedId = `seed_${nanoid(12)}`
+        await query(
+          `INSERT INTO seed_couplets (id, campaign_id, sequence_number, line_one, line_two, author, created_at)
+           VALUES ($1, $2, $3, $4, $5, $6, now())`,
+          [seedId, id, i, seed.lineOne.trim(), seed.lineTwo.trim(), seed.author.trim()],
+        )
+      }
+    }
   } catch (err) {
     console.log("[v0] updateCampaign error:", err)
     return { ok: false, error: "Could not save changes." }
