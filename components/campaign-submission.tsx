@@ -20,6 +20,13 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import {
   formatCampaignDate,
@@ -27,6 +34,7 @@ import {
   type CampaignPhase,
 } from "@/lib/mock-data"
 import { submitContribution } from "@/lib/actions"
+import { COUNTRIES } from "@/lib/countries"
 
 const VERSE_MAX = 100
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -43,6 +51,7 @@ type OtpStatus =
 interface FieldErrors {
   fullName?: string
   email?: string
+  country?: string
   otp?: string
   verseOne?: string
   verseTwo?: string
@@ -120,6 +129,7 @@ function ActiveForm({ campaign }: { campaign: Campaign }) {
 
   const [fullName, setFullName] = useState("")
   const [email, setEmail] = useState("")
+  const [country, setCountry] = useState("")
   const [otp, setOtp] = useState("")
   const [emailVerified, setEmailVerified] = useState(false)
   const [otpStatus, setOtpStatus] = useState<OtpStatus>("idle")
@@ -143,6 +153,7 @@ function ActiveForm({ campaign }: { campaign: Campaign }) {
     if (!fullName.trim()) errors.fullName = "Please tell us your name."
     if (!email.trim()) errors.email = "An email is required."
     else if (!emailIsValid) errors.email = "Enter a valid email address."
+    if (!country.trim()) errors.country = "Please select your country."
     if (requiresVerification && !emailVerified)
       errors.otp = "Please verify your email before submitting."
     if (!verseOne.trim()) errors.verseOne = "Your first line cannot be empty."
@@ -240,6 +251,7 @@ function ActiveForm({ campaign }: { campaign: Campaign }) {
     setTouched({
       fullName: true,
       email: true,
+      country: true,
       otp: true,
       verseOne: true,
       verseTwo: true,
@@ -255,6 +267,7 @@ function ActiveForm({ campaign }: { campaign: Campaign }) {
         campaignId: campaign.id,
         fullName: fullName.trim(),
         email: email.trim(),
+        country: country.trim() || null,
         lineOne: verseOne.trim(),
         lineTwo: verseTwo.trim(),
         consent,
@@ -274,6 +287,7 @@ function ActiveForm({ campaign }: { campaign: Campaign }) {
       setOutcome(result.status ?? "pending")
       setFullName("")
       setEmail("")
+      setCountry("")
       setOtp("")
       setEmailVerified(false)
       setOtpStatus("idle")
@@ -537,6 +551,29 @@ function ActiveForm({ campaign }: { campaign: Campaign }) {
             {requiresVerification && !emailVerified && showError("otp") && (
               <FieldError id="otp-error" message={showError("otp")} />
             )}
+          </div>
+
+          {/* Country */}
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="country">Country</Label>
+            <Select value={country} onValueChange={setCountry}>
+              <SelectTrigger
+                id="country"
+                aria-required="true"
+                aria-invalid={!!showError("country")}
+                aria-describedby={showError("country") ? "country-error" : undefined}
+              >
+                <SelectValue placeholder="Select your country" />
+              </SelectTrigger>
+              <SelectContent className="max-h-60">
+                {COUNTRIES.map((c) => (
+                  <SelectItem key={c} value={c}>
+                    {c}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <FieldError id="country-error" message={showError("country")} />
           </div>
 
           <VerseField

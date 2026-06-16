@@ -6,10 +6,12 @@ import type { Contribution } from "@/lib/mock-data"
 
 const PAGE_SIZE = 10
 
+type DisplayCouplet = Contribution & { isSeed?: boolean }
+
 export function CampaignPoem({
   couplets,
 }: {
-  couplets: Contribution[]
+  couplets: DisplayCouplet[]
 }) {
   const [visible, setVisible] = useState(PAGE_SIZE)
   const shown = couplets.slice(0, visible)
@@ -40,6 +42,7 @@ export function CampaignPoem({
               key={couplet.id}
               couplet={couplet}
               isLast={index === shown.length - 1}
+              isSeed={couplet.isSeed}
             />
           ))}
         </ol>
@@ -65,9 +68,11 @@ export function CampaignPoem({
 function Couplet({
   couplet,
   isLast,
+  isSeed,
 }: {
-  couplet: Contribution
+  couplet: DisplayCouplet
   isLast: boolean
+  isSeed?: boolean
 }) {
   const author = couplet.authorName?.trim() || "Anonymous"
 
@@ -83,6 +88,11 @@ function Couplet({
         <cite className="not-italic font-medium text-foreground/80">
           {author}
         </cite>
+        {isSeed && (
+          <span className="ml-2 inline-block rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
+            Seed
+          </span>
+        )}
         {couplet.country ? (
           <span className="text-muted-foreground">, {couplet.country}</span>
         ) : null}

@@ -572,7 +572,7 @@ export async function createCampaign(
           require_email_verification, auto_email_on_publish,
           start_date, close_date, created_at, updated_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
-               $16, $17, now(), now() + interval '30 days', now(), now())`,
+               $16, $17, $18, $19, now(), now())`,
       [
         id,
         slug,
@@ -591,6 +591,8 @@ export async function createCampaign(
         input.donationLink?.trim() || null,
         input.requireEmailVerification,
         input.autoEmailOnPublish,
+        new Date(input.startDate).toISOString(),
+        new Date(input.closeDate).toISOString(),
       ],
     )
 
@@ -638,7 +640,7 @@ export async function updateCampaign(
              ai_moderation = $6, ai_level = $7, video_link = $8,
              donation_link = $9, background_image_url = $10,
              require_email_verification = $11, auto_email_on_publish = $12,
-             updated_at = now()
+             start_date = $13, close_date = $14, updated_at = now()
        WHERE id = $1`,
       [
         id,
@@ -653,6 +655,8 @@ export async function updateCampaign(
         input.backgroundImageUrl?.trim() || null,
         input.requireEmailVerification,
         input.autoEmailOnPublish,
+        new Date(input.startDate).toISOString(),
+        new Date(input.closeDate).toISOString(),
       ],
     )
 

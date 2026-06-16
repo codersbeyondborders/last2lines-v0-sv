@@ -8,6 +8,7 @@ import {
   Loader2,
   Check,
   AlertCircle,
+  Calendar,
 } from "lucide-react"
 import {
   type Campaign,
@@ -74,6 +75,12 @@ export function CampaignForm({ campaign, seedCouplets }: { campaign?: Campaign; 
   const [donationLink, setDonationLink] = useState(
     campaign?.donationLink ?? "",
   )
+  const [startDate, setStartDate] = useState(
+    campaign?.startDate ? new Date(campaign.startDate).toISOString().split('T')[0] : "",
+  )
+  const [closeDate, setCloseDate] = useState(
+    campaign?.closeDate ? new Date(campaign.closeDate).toISOString().split('T')[0] : "",
+  )
   const [status, setStatus] = useState<CampaignStatus>(
     campaign?.status === "archived" ? "draft" : (campaign?.status ?? "draft"),
   )
@@ -104,7 +111,10 @@ export function CampaignForm({ campaign, seedCouplets }: { campaign?: Campaign; 
   const [error, setError] = useState<string | null>(null)
 
   const titleError = touched && !title.trim() ? "Title is required." : null
-  const isValid = title.trim().length > 0
+  const startDateError = touched && !startDate ? "Start date is required." : null
+  const closeDateError = touched && !closeDate ? "Close date is required." : null
+  const dateRangeError = touched && startDate && closeDate && new Date(startDate) >= new Date(closeDate) ? "Close date must be after start date." : null
+  const isValid = title.trim().length > 0 && startDate && closeDate && new Date(startDate) < new Date(closeDate)
 
   function addSeed() {
     setSeeds((prev) => [
@@ -140,6 +150,8 @@ export function CampaignForm({ campaign, seedCouplets }: { campaign?: Campaign; 
       donationLink: donationLink.trim() || null,
       requireEmailVerification,
       autoEmailOnPublish,
+      startDate: new Date(startDate).toISOString(),
+      closeDate: new Date(closeDate).toISOString(),
       seedCouplets: seeds.map((s) => ({
         lineOne: s.lineOne,
         lineTwo: s.lineTwo,
@@ -225,6 +237,82 @@ export function CampaignForm({ campaign, seedCouplets }: { campaign?: Campaign; 
             rows={4}
             placeholder="Describe the cause and what contributors are writing toward."
           />
+        </div>
+      </FormSection>
+
+      {/* Date Range */}
+      <FormSection
+        title="Campaign dates"
+        description="Set when submissions can be received. Contributions outside this window are automatically locked."
+      >
+        <div className="flex flex-col gap-4 sm:flex-row sm:gap-4">
+          <div className="flex flex-col gap-2 flex-1">
+            <Label htmlFor="start-date">
+              Start date <span className="text-destructive">*</span>
+            </Label>
+            <div className="relative">
+              <Calendar className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground pointer-events-none" aria-hidden="true" />
+              <Input
+                id="start-date"
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                onBlur={() => setTouched(true)}
+                aria-invalid={Boolean(startDateError)}
+                aria-describedby={startDateError ? "start-date-error" : undefined}
+                className={cn("pl-9", startDateError && "border-destructive")}
+              />
+            </div>
+            {startDateError ? (
+              <p
+                id="start-date-error"
+                role="alert"
+                aria-live="polite"
+                className="text-sm text-destructive"
+              >
+                {startDateError}
+              </p>
+            ) : null}
+          </div>
+
+          <div className="flex flex-col gap-2 flex-1">
+            <Label htmlFor="close-date">
+              Close date <span className="text-destructive">*</span>
+            </Label>
+            <div className="relative">
+              <Calendar className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground pointer-events-none" aria-hidden="true" />
+              <Input
+                id="close-date"
+                type="date"
+                value={closeDate}
+                onChange={(e) => setCloseDate(e.target.value)}
+                onBlur={() => setTouched(true)}
+                aria-invalid={Boolean(closeDateError || dateRangeError)}
+                aria-describedby={closeDateError || dateRangeError ? "close-date-error" : undefined}
+                className={cn("pl-9", (closeDateError || dateRangeError) && "border-destructive")}
+              />
+            </div>
+            {closeDateError ? (
+              <p
+                id="close-date-error"
+                role="alert"
+                aria-live="polite"
+                className="text-sm text-destructive"
+              >
+                {closeDateError}
+              </p>
+            ) : null}
+            {dateRangeError ? (
+              <p
+                id="close-date-error"
+                role="alert"
+                aria-live="polite"
+                className="text-sm text-destructive"
+              >
+                {dateRangeError}
+              </p>
+            ) : null}
+          </div>
         </div>
       </FormSection>
 
