@@ -32,6 +32,12 @@ export function SiteHeader() {
             Campaigns
           </a>
           <Link
+            href="/visualize"
+            className="rounded-md px-3 py-2 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            Map
+          </Link>
+          <Link
             href="/about"
             className="rounded-md px-3 py-2 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >

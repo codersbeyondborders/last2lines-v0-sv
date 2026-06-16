@@ -384,3 +384,47 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
     bannedCount: Number(r.banned_count),
   }
 }
+
+export async function getContributionsByCountry(
+  campaignId?: string,
+): Promise<Array<{ country: string; count: number; percentage: number }>> {
+  "use server"
+
+  let sql = `
+    SELECT 
+      a.country,
+      COUNT(c.id) as count
+    FROM contributions c
+    JOIN authors a ON c.author_id = a.id
+    WHERE c.status = 'approved'
+  `
+
+  const params: unknown[] = []
+
+  if (campaignId) {
+    sql += ` AND c.campaign_id = $1`
+    params.push(campaignId)
+  }
+
+  sql += ` GROUP BY a.country
+          ORDER BY count DESC`
+
+  const result = await query<{
+    country: string | null
+    count: string
+  }>(sql, params)
+
+  const rows = result.rows || []
+
+  // Calculate total
+  const total = rows.reduce((sum, row) => sum + parseInt(row.count, 10), 0)
+
+  // Filter out null countries and calculate percentages
+  return rows
+    .filter((row) => row.country && row.country.trim() !== "")
+    .map((row) => ({
+      country: row.country || "Unknown",
+      count: parseInt(row.count, 10),
+      percentage: total > 0 ? (parseInt(row.count, 10) / total) * 100 : 0,
+    }))
+}
