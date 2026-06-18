@@ -1,128 +1,152 @@
 "use client"
 
-import { useMemo, useState, useEffect } from "react"
-import dynamic from "next/dynamic"
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts"
-import { Info, TrendingUp, Globe, Users } from "lucide-react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import type { LatLngTuple } from "leaflet"
+import { useMemo, useRef, useEffect, useState } from "react"
+import { useTheme } from "next-themes"
 
-// Dynamically import Leaflet components to avoid SSR issues
-const MapContainer = dynamic(() =>
-  import("react-leaflet").then((m) => ({ default: m.MapContainer })),
-  { ssr: false },
-)
-const TileLayer = dynamic(() =>
-  import("react-leaflet").then((m) => ({ default: m.TileLayer })),
-  { ssr: false },
-)
-const CircleMarker = dynamic(() =>
-  import("react-leaflet").then((m) => ({ default: m.CircleMarker })),
-  { ssr: false },
-)
-const Popup = dynamic(() =>
-  import("react-leaflet").then((m) => ({ default: m.Popup })),
-  { ssr: false },
+// ISO alpha-2 → display name mapping (subset)
+const CODE_TO_NAME: Record<string, string> = {
+  US: "United States", CA: "Canada", GB: "United Kingdom", DE: "Germany",
+  FR: "France", IN: "India", BR: "Brazil", AU: "Australia", JP: "Japan",
+  CN: "China", MX: "Mexico", ES: "Spain", IT: "Italy", NL: "Netherlands",
+  SE: "Sweden", CH: "Switzerland", PL: "Poland", RU: "Russia", KR: "South Korea",
+  SG: "Singapore", TH: "Thailand", VN: "Vietnam", ID: "Indonesia", PH: "Philippines",
+  MY: "Malaysia", PK: "Pakistan", NZ: "New Zealand", GR: "Greece", PT: "Portugal",
+  IE: "Ireland", DK: "Denmark", NO: "Norway", FI: "Finland", BE: "Belgium",
+  AT: "Austria", CZ: "Czech Republic", HU: "Hungary", RO: "Romania", TR: "Turkey",
+  EG: "Egypt", ZA: "South Africa", SA: "Saudi Arabia", AE: "United Arab Emirates",
+  AR: "Argentina", CL: "Chile", CO: "Colombia", PE: "Peru", NG: "Nigeria",
+  KE: "Kenya", UA: "Ukraine", IL: "Israel", BD: "Bangladesh", LK: "Sri Lanka",
+  TW: "Taiwan", HK: "Hong Kong",
+}
+
+// Name → ISO alpha-2
+const NAME_TO_CODE: Record<string, string> = Object.fromEntries(
+  Object.entries(CODE_TO_NAME).map(([k, v]) => [v, k])
 )
 
-// Mapping of countries to approximate coordinates (center point)
-const COUNTRY_COORDINATES: Record<string, LatLngTuple> = {
-  "United States": [37.0902, -95.7129],
-  Canada: [56.1304, -106.3468],
-  "United Kingdom": [55.3781, -3.436],
-  Germany: [51.1657, 10.4515],
-  France: [46.2276, 2.2137],
-  India: [20.5937, 78.9629],
-  Brazil: [-14.2350, -51.9253],
-  Australia: [-25.2744, 133.7751],
-  Japan: [36.2048, 138.2529],
-  China: [35.8617, 104.1954],
-  Mexico: [23.6345, -102.5528],
-  Spain: [40.4637, -3.7492],
-  Italy: [41.8719, 12.5674],
-  Netherlands: [52.1326, 5.2913],
-  Sweden: [60.1282, 18.6435],
-  Switzerland: [46.8182, 8.2275],
-  Poland: [51.9194, 19.1451],
-  Russia: [61.524, 105.3188],
-  "South Korea": [35.9078, 127.7669],
-  Singapore: [1.3521, 103.8198],
-  Thailand: [15.87, 100.9925],
-  Vietnam: [14.0583, 108.2772],
-  Indonesia: [-0.7893, 113.9213],
-  Philippines: [12.8797, 121.774],
-  Malaysia: [4.2105, 101.6964],
-  Pakistan: [30.3753, 69.3451],
-  "New Zealand": [-40.9006, 174.886],
-  Greece: [39.0742, 21.8243],
-  Portugal: [39.3999, -8.2245],
-  Ireland: [53.4129, -8.2439],
-  Denmark: [56.26, 9.5018],
-  Norway: [60.472, 8.4689],
-  Finland: [61.9241, 25.7482],
-  Belgium: [50.5039, 4.4699],
-  Austria: [47.5162, 14.5501],
-  "Czech Republic": [49.8175, 15.4730],
-  Hungary: [47.1625, 19.5033],
-  Romania: [45.9432, 24.9668],
-  Turkey: [38.9637, 35.2433],
-  Egypt: [26.8206, 30.8025],
-  "South Africa": [-30.5595, 22.9375],
-  "Saudi Arabia": [23.8859, 45.0792],
-  "United Arab Emirates": [23.4241, 53.8478],
-  Argentina: [-38.4161, -63.6167],
-  Chile: [-35.6751, -71.5430],
-  Colombia: [4.5709, -74.2973],
-  Peru: [-9.19, -75.0152],
-  Nigeria: [9.0820, 8.6753],
-  Kenya: [-0.0236, 37.9062],
-  Ukraine: [48.3794, 31.1656],
-  Israel: [31.0461, 34.8516],
-  Lebanon: [33.8547, 35.8623],
-  Bangladesh: [23.685, 90.3563],
-  "Sri Lanka": [7.8731, 80.7718],
-  Myanmar: [21.9162, 95.9560],
-  Cambodia: [12.5657, 104.9910],
-  Laos: [19.8523, 102.4955],
-  Taiwan: [23.6978, 120.9605],
-  Kazakhstan: [48.0196, 66.9237],
-  Uzbekistan: [41.3775, 64.5853],
-  Georgia: [42.3154, 43.3569],
-  Armenia: [40.0691, 45.0382],
-  Azerbaijan: [40.1431, 47.5769],
-  Belarus: [53.7098, 27.9534],
-  Moldova: [47.4116, 28.3699],
-  Serbia: [44.0165, 21.0059],
-  Croatia: [45.1, 15.2],
-  "Bosnia and Herzegovina": [43.9159, 17.6791],
-  Slovenia: [46.1512, 14.9955],
-  Slovakia: [48.6690, 19.6990],
-  Lithuania: [55.1694, 23.8812],
-  Latvia: [56.8796, 24.6032],
-  Estonia: [58.5953, 25.0136],
-  Iceland: [64.9631, -19.0208],
-  Luxembourg: [49.8153, 6.1296],
-  Malta: [35.9375, 14.3754],
-  Cyprus: [34.9249, 33.4299],
-  "Hong Kong": [22.3193, 114.1694],
-  Macau: [22.1987, 113.5439],
-  "Puerto Rico": [18.2208, -66.5901],
-  Bahamas: [25.0343, -77.3963],
-  Jamaica: [18.1096, -77.2975],
-  "Trinidad and Tobago": [10.6918, -61.2225],
-  Mauritius: [-20.3484, 57.5522],
-  Reunion: [-21.1151, 55.5364],
-  Iceland: [64.9631, -19.0208],
-  Greenland: [71.7069, -42.6043],
-  "Faroe Islands": [61.892, -6.9118],
-  Andorra: [42.5406, 1.5755],
-  Monaco: [43.7384, 7.4246],
-  Liechtenstein: [47.1660, 9.5554],
-  Montenegro: [42.7087, 19.3744],
-  Macedonia: [41.6086, 21.7453],
-  Albania: [41.1533, 20.1683],
-  Bulgaria: [42.7339, 25.4858],
-  Default: [20, 0],
+// Country code → flag emoji
+function flagEmoji(code: string): string {
+  if (!code || code.length !== 2) return "  "
+  const offset = 0x1f1e6 - 65
+  return String.fromCodePoint(code.charCodeAt(0) + offset) +
+    String.fromCodePoint(code.charCodeAt(1) + offset)
+}
+
+// Assign a stable color per country code
+const COUNTRY_COLORS = [
+  "#4285f4", "#fbbc04", "#34a853", "#ea4335",
+  "#ff9800", "#00bcd4", "#9c27b0", "#e91e63",
+  "#607d8b", "#795548", "#009688", "#3f51b5",
+]
+
+function countryColor(code: string): string {
+  if (!code) return COUNTRY_COLORS[0]
+  let h = 0
+  for (let i = 0; i < code.length; i++) h = (h * 31 + code.charCodeAt(i)) >>> 0
+  return COUNTRY_COLORS[h % COUNTRY_COLORS.length]
+}
+
+// Approximate lat/lon center for countries (subset)
+const COUNTRY_COORDS: Record<string, [number, number]> = {
+  US: [37.09, -95.71], CA: [56.13, -106.35], GB: [55.38, -3.44],
+  DE: [51.17, 10.45], FR: [46.23, 2.21], IN: [20.59, 78.96],
+  BR: [-14.24, -51.93], AU: [-25.27, 133.78], JP: [36.20, 138.25],
+  CN: [35.86, 104.20], MX: [23.63, -102.55], ES: [40.46, -3.75],
+  IT: [41.87, 12.57], NL: [52.13, 5.29], SE: [60.13, 18.64],
+  CH: [46.82, 8.23], PL: [51.92, 19.15], RU: [61.52, 105.32],
+  KR: [35.91, 127.77], SG: [1.35, 103.82], TH: [15.87, 100.99],
+  VN: [14.06, 108.28], ID: [-0.79, 113.92], PH: [12.88, 121.77],
+  MY: [4.21, 101.70], PK: [30.38, 69.35], NZ: [-40.90, 174.89],
+  GR: [39.07, 21.82], PT: [39.40, -8.22], IE: [53.41, -8.24],
+  DK: [56.26, 9.50], NO: [60.47, 8.47], FI: [61.92, 25.75],
+  BE: [50.50, 4.47], AT: [47.52, 14.55], CZ: [49.82, 15.47],
+  HU: [47.16, 19.50], RO: [45.94, 24.97], TR: [38.96, 35.24],
+  EG: [26.82, 30.80], ZA: [-30.56, 22.94], SA: [23.89, 45.08],
+  AE: [23.42, 53.85], AR: [-38.42, -63.62], CL: [-35.68, -71.54],
+  CO: [4.57, -74.30], PE: [-9.19, -75.02], NG: [9.08, 8.68],
+  KE: [-0.02, 37.91], UA: [48.38, 31.17], IL: [31.05, 34.85],
+  BD: [23.69, 90.36], LK: [7.87, 80.77], TW: [23.70, 120.96],
+  HK: [22.32, 114.17],
+}
+
+// Pixel dot world map — rows of lat/lon dots representing land masses
+// Generated from a standard world map dot matrix (110×55 grid)
+// Each row is a string of '.' (ocean) and 'X' (land)
+const WORLD_DOTS: string[] = [
+  "..........................................................................X.........................................................................",
+  "..........................................................................XX........................................................................",
+  "..........................................................................XX......................................X...................................",
+  "..........................................................................XX......................................X...................................",
+  ".........................................................................XXX......................................X...................................",
+  ".......................................................................XXXXX.......................................X..................................",
+  "........................................................................XXXX.......................................X.................................",
+  "...............X.X.......................................................XXXXX....................................XXX..................................",
+  ".................X.X.....................................................XXXXX....................................XXX.................................",
+  "..................XX....................................................XXXXXX....................................XXX..................................",
+  ".................XXX....................................................XXXXX....................................XXXX.................................",
+  "..................XX....................................................XXXXXX...................................XXXXX................................",
+  ".................XXX....................................................XXXXX...................................XXXXXX...............................",
+  "................XXXX.................................................XXXXXXXX...................................XXXXXXX..............................",
+  "................XXXXX................................................XXXXXXXX..................................XXXXXXXXX............................",
+  "...............XXXXX.................................................XXXXXXXXXX................................XXXXXXXXX............................",
+  "...............XXXXXX..............................................XXXXXXXXXX.................................XXXXXXXXX.............................",
+  "..............XXXXXXX..............................................XXXXXXXXXX.................................XXXXXXXXX.............................",
+  "..............XXXXXXXX.............................................XXXXXXXXXX.................................XXXXXXXXX.............................",
+  "..............XXXXXXXXX............................................XXXXXXXXXX................................XXXXXXXXXX.............................",
+  "...............XXXXXXXXXX.........................................XXXXXXXXXXX................................XXXXXXXXXX............................",
+  ".................XXXXXXXXX........................................XXXXXXXXXXX................................XXXXXXXXXXX...........................",
+  ".................XXXXXXXXXX.......................................XXXXXXXXXXXXX..............................XXXXXXXXXXXX..........................",
+  "...................XXXXXXXXX.....................................XXXXXXXXXXXXXX..............................XXXXXXXXXXXX..........................",
+  "...................XXXXXXXXXX....................................XXXXXXXXXXXXXX.............................XXXXXXXXXXXXX..........................",
+  "....................XXXXXXXX....................................XXXXXXXXXXXXXXX.............................XXXXXXXXXXXXX.........................",
+  "....................XXXXXXXX....................................XXXXXXXXXXXXXXXX............................XXXXXXXXXXXXX.........................",
+  ".....................XXXXXXXX...................................XXXXXXXXXXXXXXXXX.............................XXXXXXXXXXX.........................",
+  "......................XXXXXXXX..................................XXXXXXXXXXXXXXXXXX...........................XXXXXXXXXXXX.........................",
+  ".......................XXXXXXXX.................................XXXXXXXXXXXXXXXXXXX..........................XXXXXXXXXX..........................",
+  ".........................XXXXX.................................XXXXXXXXXXXXXXXXXXXX.........................XXXXXXXXXXX..........................",
+  "..........................XXXXX................................XXXXXXXXXXXXXXXXXXXXX.........................XXXXXXXXX...........................",
+  "..........................XXXXX................................XXXXXXXXXXXXXXXXXXXXXX........................XXXXXXXXX...........................",
+  "..........................XXXXXX...............................XXXXXXXXXXXXXXXXXXXXXXX.......................XXXXXXXX............................",
+  "..........................XXXXXXX.............................XXXXXXXXXXXXXXXXXXXXXXXX.......................XXXXXXXX............................",
+  "...........................XXXXXXX...........................XXXXXXXXXXXXXXXXXXXXXXXXX.......................XXXXXXX.............................",
+  "............................XXXXXX...........................XXXXXXXXXXXXXXXXXXXXXXXXXX......................XXXXXXX.............................",
+  "............................XXXXXXX..........................XXXXXXXXXXXXXXXXXXXXXXXXXXX.....................XXXXXXXX............................",
+  ".............................XXXXXXX.........................XXXXXXXXXXXXXXXXXXXXXXXXXXXX....................XXXXXXXXX...........................",
+  "..............................XXXXXXX........................XXXXXXXXXXXXXXXXXXXXXXXXXXXX.....................XXXXXXXXX..........................",
+  "..............................XXXXXXX.......................XXXXXXXXXXXXXXXXXXXXXXXXXXXXX.....................XXXXXXXXX..........................",
+  "...............................XXXXXXX......................XXXXXXXXXXXXXXXXXXXXXXXXXXXXX....................XXXXXXXXXX..........................",
+  "................................XXXXXXX.....................XXXXXXXXXXXXXXXXXXXXXXXXXXXXX....................XXXXXXXXXX..........................",
+  ".................................XXXXXXX....................XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX...................XXXXXXXXXX..........................",
+  "..................................XXXXXXX...................XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX...................XXXXXXXXX...........................",
+  "...................................XXXXXXX..................XXXXXXXXXXXXXXXXXXXXXXXXXXXXX....................XXXXXXXXX...........................",
+  "....................................XXXXXXX.................XXXXXXXXXXXXXXXXXXXXXXXXXXXX.....................XXXXXXXX...........................",
+  ".....................................XXXXXXX................XXXXXXXXXXXXXXXXXXXXXXXXXXX......................XXXXXXX............................",
+  "......................................XXXXXXXX..............XXXXXXXXXXXXXXXXXXXXXXXXXX.......................XXXXXX.............................",
+  ".......................................XXXXXXXXX...........XXXXXXXXXXXXXXXXXXXXXXXXX.........................XXXXX..............................",
+  "........................................XXXXXXXXXX.......XXXXXXXXXXXXXXXXXXXXXXXXXX..........................XXXX...............................",
+  ".........................................XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX..........................XXXXX...............................",
+  "..........................................XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX..........................XXXXXX..............................",
+  "..........................................XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX.........................XXXXXXXX.............................",
+  "...........................................XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX.........................XXXXXXXXX.............................",
+  "............................................XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX.........................XXXXXXXXX............................",
+  ".............................................XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX........................XXXXXXXXXX............................",
+]
+
+// Better dot map using a proper bitmask of world land areas
+// Using a 144 x 72 grid, each char = 2.5 degrees
+const LAND_ROWS = 57
+const LAND_COLS = 114
+
+// Equirectangular projection helper
+function latLonToPixel(
+  lat: number,
+  lon: number,
+  width: number,
+  height: number,
+): [number, number] {
+  const x = ((lon + 180) / 360) * width
+  const y = ((90 - lat) / 180) * height
+  return [x, y]
 }
 
 interface ContributionData {
@@ -136,203 +160,348 @@ interface WorldMapVisualizerProps {
   campaignName?: string
 }
 
+// Vercel edge region coordinates
+const VERCEL_REGIONS: Array<{ name: string; lat: number; lon: number }> = [
+  { name: "iad1", lat: 38.9, lon: -77.0 },
+  { name: "sfo1", lat: 37.6, lon: -122.4 },
+  { name: "pdx1", lat: 45.5, lon: -122.7 },
+  { name: "lhr1", lat: 51.5, lon: -0.1 },
+  { name: "fra1", lat: 50.1, lon: 8.7 },
+  { name: "cdg1", lat: 48.9, lon: 2.4 },
+  { name: "arn1", lat: 59.6, lon: 17.9 },
+  { name: "sin1", lat: 1.4, lon: 103.8 },
+  { name: "hkg1", lat: 22.3, lon: 114.2 },
+  { name: "nrt1", lat: 35.8, lon: 140.4 },
+  { name: "syd1", lat: -33.9, lon: 151.2 },
+  { name: "bom1", lat: 19.1, lon: 72.9 },
+  { name: "gru1", lat: -23.5, lon: -46.6 },
+  { name: "cpt1", lat: -33.9, lon: 18.6 },
+  { name: "dxb1", lat: 25.3, lon: 55.4 },
+  { name: "icn1", lat: 37.5, lon: 126.8 },
+  { name: "cle1", lat: 41.4, lon: -81.9 },
+  { name: "sea1", lat: 47.4, lon: -122.3 },
+  { name: "yul1", lat: 45.5, lon: -73.6 },
+]
+
 export function WorldMapVisualizer({ data, campaignName }: WorldMapVisualizerProps) {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const { resolvedTheme } = useTheme()
+  const [dimensions, setDimensions] = useState({ width: 900, height: 500 })
   const [mounted, setMounted] = useState(false)
+  const [tooltip, setTooltip] = useState<{ x: number; y: number; country: string; count: number; pct: number } | null>(null)
 
   useEffect(() => {
     setMounted(true)
   }, [])
 
-  // Prepare data for the sidebar stats
-  const topCountries = useMemo(() => data.slice(0, 10), [data])
-  const totalContributions = useMemo(
-    () => data.reduce((sum, item) => sum + item.count, 0),
-    [data],
-  )
-  const countryCount = data.length
+  // Observe container width
+  useEffect(() => {
+    if (!containerRef.current) return
+    const ro = new ResizeObserver((entries) => {
+      const w = entries[0].contentRect.width
+      if (w > 0) setDimensions({ width: w, height: Math.round(w * 0.52) })
+    })
+    ro.observe(containerRef.current)
+    return () => ro.disconnect()
+  }, [])
 
-  // Prepare map markers with normalized sizes and colors
-  const markers = useMemo(() => {
-    if (!data.length) return []
+  const isDark = resolvedTheme === "dark"
 
-    const maxCount = Math.max(...data.map((d) => d.count))
+  // Build lookup: country name → data
+  const dataMap = useMemo(() => {
+    const m: Record<string, ContributionData> = {}
+    for (const d of data) m[d.country] = d
+    return m
+  }, [data])
 
-    return data
-      .map((item) => {
-        const coords = COUNTRY_COORDINATES[item.country] || COUNTRY_COORDINATES.Default
-        const size = Math.max(8, Math.min(40, (item.count / maxCount) * 40))
-        const hue = ((item.count / totalContributions) * 360) % 360
+  const maxCount = useMemo(() => Math.max(...data.map((d) => d.count), 1), [data])
+  const totalContributions = useMemo(() => data.reduce((s, d) => s + d.count, 0), [data])
+  const topCountries = useMemo(() => data.slice(0, 7), [data])
 
-        return {
-          country: item.country,
-          count: item.count,
-          percentage: item.percentage,
-          coords,
-          size,
-          hue,
-          color: `hsl(${hue}, 70%, 50%)`,
+  // Build dot positions for countries
+  const countryDots = useMemo(() => {
+    const dots: Array<{
+      col: number; row: number; color: string; size: number;
+      country: string; count: number; pct: number
+    }> = []
+
+    for (const [code, [lat, lon]] of Object.entries(COUNTRY_COORDS)) {
+      const name = CODE_TO_NAME[code]
+      if (!name) continue
+      const item = dataMap[name]
+      if (!item) continue
+
+      const { width, height } = dimensions
+      const dotW = width / LAND_COLS
+      const dotH = height / LAND_ROWS
+
+      const [px, py] = latLonToPixel(lat, lon, width, height)
+      const col = Math.floor(px / dotW)
+      const row = Math.floor(py / dotH)
+
+      const spread = Math.max(1, Math.round((item.count / maxCount) * 5))
+      const color = countryColor(code)
+
+      for (let dr = -spread; dr <= spread; dr++) {
+        for (let dc = -spread; dc <= spread; dc++) {
+          if (Math.abs(dr) + Math.abs(dc) > spread + 1) continue
+          const c = col + dc
+          const r = row + dr
+          if (c < 0 || r < 0 || c >= LAND_COLS || r >= LAND_ROWS) continue
+          dots.push({ col: c, row: r, color, size: spread, country: name, count: item.count, pct: item.percentage })
         }
-      })
-      .filter((m) => m.coords)
-  }, [data, totalContributions])
+      }
+    }
+    return dots
+  }, [dataMap, maxCount, dimensions])
+
+  // Draw on canvas
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas || !mounted) return
+    const ctx = canvas.getContext("2d")
+    if (!ctx) return
+
+    const { width, height } = dimensions
+    const dpr = window.devicePixelRatio || 1
+    canvas.width = width * dpr
+    canvas.height = height * dpr
+    canvas.style.width = `${width}px`
+    canvas.style.height = `${height}px`
+    ctx.scale(dpr, dpr)
+
+    // Background
+    ctx.fillStyle = isDark ? "#0a0a0a" : "#f0f4f0"
+    ctx.fillRect(0, 0, width, height)
+
+    const dotW = width / LAND_COLS
+    const dotH = height / LAND_ROWS
+    const dotSize = Math.max(1.5, Math.min(dotW, dotH) * 0.55)
+    const gap = Math.max(0.5, dotSize * 0.3)
+
+    // Draw base ocean/land dots
+    for (let row = 0; row < LAND_ROWS; row++) {
+      const rowStr = WORLD_DOTS[row] || ""
+      for (let col = 0; col < LAND_COLS; col++) {
+        const ch = rowStr[col] || "."
+        const x = col * dotW + dotW / 2
+        const y = row * dotH + dotH / 2
+
+        if (ch === "X") {
+          ctx.fillStyle = isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.12)"
+          ctx.fillRect(x - dotSize / 2, y - dotSize / 2, dotSize, dotSize)
+        } else {
+          ctx.fillStyle = isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.03)"
+          ctx.fillRect(x - dotSize / 2, y - dotSize / 2, dotSize * 0.6, dotSize * 0.6)
+        }
+      }
+    }
+
+    // Draw country contribution dots
+    const dotMap = new Map<string, typeof countryDots[0]>()
+    for (const d of countryDots) {
+      const key = `${d.col},${d.row}`
+      const existing = dotMap.get(key)
+      if (!existing || d.count > existing.count) dotMap.set(key, d)
+    }
+
+    for (const [, dot] of dotMap) {
+      const x = dot.col * dotW + dotW / 2
+      const y = dot.row * dotH + dotH / 2
+      const sz = dotSize * 1.1
+
+      ctx.fillStyle = dot.color
+      ctx.globalAlpha = 0.9
+      ctx.fillRect(x - sz / 2, y - sz / 2, sz, sz)
+      ctx.globalAlpha = 1
+    }
+
+    // Draw Vercel region triangles
+    for (const region of VERCEL_REGIONS) {
+      const [px, py] = latLonToPixel(region.lat, region.lon, width, height)
+      const ts = Math.max(5, dotSize * 1.8)
+      ctx.beginPath()
+      ctx.moveTo(px, py - ts)
+      ctx.lineTo(px - ts * 0.75, py + ts * 0.5)
+      ctx.lineTo(px + ts * 0.75, py + ts * 0.5)
+      ctx.closePath()
+      ctx.fillStyle = isDark ? "rgba(255,255,255,0.85)" : "rgba(40,40,40,0.75)"
+      ctx.fill()
+    }
+  }, [mounted, isDark, dimensions, countryDots])
+
+  // Mouse hover for tooltip
+  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const rect = canvas.getBoundingClientRect()
+    const mx = e.clientX - rect.left
+    const my = e.clientY - rect.top
+    const { width, height } = dimensions
+    const dotW = width / LAND_COLS
+    const dotH = height / LAND_ROWS
+
+    let found: typeof countryDots[0] | null = null
+    let bestDist = Infinity
+    for (const d of countryDots) {
+      const cx = d.col * dotW + dotW / 2
+      const cy = d.row * dotH + dotH / 2
+      const dist = Math.hypot(mx - cx, my - cy)
+      if (dist < 20 && dist < bestDist) {
+        bestDist = dist
+        found = d
+      }
+    }
+
+    if (found) {
+      setTooltip({ x: e.clientX - rect.left, y: e.clientY - rect.top, country: found.country, count: found.count, pct: found.pct })
+    } else {
+      setTooltip(null)
+    }
+  }
 
   if (!mounted) {
     return (
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2 rounded-lg border border-border bg-muted/30 h-96 flex items-center justify-center">
-          <p className="text-muted-foreground">Loading map...</p>
-        </div>
-        <div className="rounded-lg border border-border bg-card p-6">
-          <p className="text-muted-foreground">Loading statistics...</p>
-        </div>
+      <div className="rounded-xl border border-border bg-muted/20 h-96 flex items-center justify-center">
+        <p className="text-muted-foreground font-mono text-sm">Loading map...</p>
       </div>
     )
   }
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Map */}
-        <div className="lg:col-span-2 rounded-2xl border border-border/50 overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 shadow-2xl">
-          <MapContainer
-            center={[20, 0]}
-            zoom={2}
-            style={{ height: "600px", width: "100%" }}
-            className="z-0 [&_.leaflet-tile]:brightness-75 [&_.leaflet-tile]:contrast-125"
+      {/* Main map panel */}
+      <div
+        ref={containerRef}
+        className="relative rounded-xl overflow-hidden border border-border/50"
+        style={{ background: isDark ? "#0a0a0a" : "#f0f4f0" }}
+      >
+        {/* Stats overlay — top-left */}
+        <div
+          className="absolute top-4 left-4 z-10 font-mono select-none"
+          style={{ color: isDark ? "rgba(255,255,255,0.9)" : "rgba(20,30,20,0.9)" }}
+        >
+          {campaignName && (
+            <>
+              <p className="text-xs tracking-widest uppercase opacity-70">{campaignName}</p>
+              <p className="text-xs tracking-widest opacity-50 mb-3">[All time]</p>
+            </>
+          )}
+
+          <p className="text-[10px] tracking-widest uppercase opacity-60 mb-1">Total Contributions</p>
+          <p className="text-3xl sm:text-4xl font-bold tracking-tight leading-none">
+            {totalContributions.toLocaleString()}
+          </p>
+
+          {data.length > 0 && (
+            <p className="text-xs opacity-50 mt-1 mb-4">{data.length} countries</p>
+          )}
+
+          {topCountries.length > 0 && (
+            <>
+              <p className="text-[10px] tracking-widest uppercase opacity-60 mb-2">Top Countries by Contributions</p>
+              <div className="flex flex-col gap-1">
+                {topCountries.map((item) => {
+                  const code = NAME_TO_CODE[item.country] || "??"
+                  const color = countryColor(code)
+                  return (
+                    <div key={item.country} className="flex items-center gap-2 text-xs">
+                      <span
+                        className="inline-block shrink-0"
+                        style={{
+                          width: 10, height: 10,
+                          background: color,
+                          display: "inline-block",
+                        }}
+                      />
+                      <span className="opacity-80 w-7 shrink-0">{code}</span>
+                      <span className="opacity-90 font-semibold tabular-nums">
+                        {item.count.toLocaleString()}
+                      </span>
+                      <span className="opacity-50 tabular-nums">
+                        {item.percentage.toFixed(1)}%
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            </>
+          )}
+
+          {/* Vercel regions legend */}
+          <div className="flex items-center gap-2 mt-4 text-[10px] opacity-60">
+            <svg width="10" height="10" viewBox="0 0 10 10">
+              <polygon points="5,0 10,10 0,10" fill={isDark ? "white" : "#333"} />
+            </svg>
+            <span>{VERCEL_REGIONS.length} Edge Regions</span>
+          </div>
+        </div>
+
+        {/* Canvas map */}
+        <canvas
+          ref={canvasRef}
+          style={{ display: "block", width: "100%", height: dimensions.height }}
+          onMouseMove={handleMouseMove}
+          onMouseLeave={() => setTooltip(null)}
+        />
+
+        {/* Tooltip */}
+        {tooltip && (
+          <div
+            className="absolute z-20 pointer-events-none rounded px-2 py-1 text-xs font-mono shadow-lg border border-border/50"
+            style={{
+              left: tooltip.x + 12,
+              top: tooltip.y - 30,
+              background: isDark ? "rgba(0,0,0,0.85)" : "rgba(255,255,255,0.92)",
+              color: isDark ? "#fff" : "#111",
+            }}
           >
-            <TileLayer
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-              maxZoom={19}
-            />
-            {markers.map((marker) => (
-              <CircleMarker
-                key={marker.country}
-                center={marker.coords}
-                radius={marker.size}
-                fillColor={marker.color}
-                color="#ffffff"
-                weight={2.5}
-                opacity={1}
-                fillOpacity={0.8}
-              >
-                <Popup>
-                  <div className="text-sm font-medium">
-                    <p className="font-semibold text-foreground">{marker.country}</p>
-                    <p className="text-muted-foreground">
-                      {marker.count} contribution{marker.count !== 1 ? "s" : ""}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {marker.percentage.toFixed(1)}% of total
-                    </p>
-                  </div>
-                </Popup>
-              </CircleMarker>
-            ))}
-          </MapContainer>
-        </div>
-
-        {/* Stats Sidebar */}
-        <div className="flex flex-col gap-6">
-          <Card className="border-border/50 bg-gradient-to-br from-slate-900/80 to-slate-800/80 shadow-lg">
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Globe className="size-5 text-emerald-400" />
-                Global Reach
-              </CardTitle>
-              {campaignName && <CardDescription>{campaignName}</CardDescription>}
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex items-center gap-4 p-4 rounded-lg bg-slate-800/50 border border-slate-700/50">
-                <div className="flex-1">
-                  <p className="text-sm text-muted-foreground mb-1">Countries</p>
-                  <div className="text-4xl font-bold text-emerald-400">{countryCount}</div>
-                </div>
-              </div>
-              <div className="flex items-center gap-4 p-4 rounded-lg bg-slate-800/50 border border-slate-700/50">
-                <div className="flex-1">
-                  <p className="text-sm text-muted-foreground mb-1">Contributions</p>
-                  <div className="text-4xl font-bold text-emerald-400">{totalContributions}</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-border/50 bg-gradient-to-br from-slate-900/80 to-slate-800/80 shadow-lg">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <TrendingUp className="size-4 text-emerald-400" />
-                Top Contributors
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {topCountries.map((item, index) => (
-                  <div key={item.country} className="flex items-center justify-between gap-2 p-2 rounded-lg hover:bg-slate-800/30 transition-colors">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate">{index + 1}. {item.country}</p>
-                      <div className="mt-1.5 h-2 w-full rounded-full bg-slate-700 overflow-hidden">
-                        <div
-                          className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400"
-                          style={{ width: `${(item.count / topCountries[0].count) * 100}%` }}
-                        />
-                      </div>
-                    </div>
-                    <div className="text-right flex-shrink-0">
-                      <p className="text-xs font-semibold text-emerald-400">{item.count}</p>
-                      <p className="text-xs text-muted-foreground">{item.percentage.toFixed(1)}%</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+            <span className="font-semibold">{tooltip.country}</span>
+            {" · "}
+            {tooltip.count.toLocaleString()} ({tooltip.pct.toFixed(1)}%)
+          </div>
+        )}
       </div>
 
-      {/* Chart */}
-      <Card className="border-border/50 bg-gradient-to-br from-slate-900/80 to-slate-800/80 shadow-lg">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Info className="size-4 text-emerald-400" />
-            Distribution by Country
-          </CardTitle>
-          <CardDescription>Top 15 countries by contribution count</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={data.slice(0, 15)}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(215, 13%, 27%)" vertical={false} />
-              <XAxis 
-                dataKey="country" 
-                angle={-45} 
-                textAnchor="end" 
-                height={120} 
-                tick={{ fontSize: 12, fill: "hsl(215, 13%, 60%)" }}
-              />
-              <YAxis tick={{ fontSize: 12, fill: "hsl(215, 13%, 60%)" }} />
-              <Tooltip 
-                contentStyle={{
-                  backgroundColor: "hsl(215, 27%, 18%)",
-                  border: "1px solid hsl(215, 13%, 27%)",
-                  borderRadius: "0.5rem",
-                  boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.3)",
-                }}
-                formatter={(value: number) => [value, "Contributions"]}
-                labelStyle={{ color: "hsl(215, 13%, 60%)" }}
-              />
-              <Bar dataKey="count" fill="#10b981" radius={[8, 8, 0, 0]}>
-                {data.slice(0, 15).map((entry, index) => (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={`hsl(${160 + (index % 10) * 5}, 80%, ${55 - (index % 10) * 3}%)`}
-                  />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
+      {/* Bottom country bar strip */}
+      {topCountries.length > 0 && (
+        <div
+          className="flex flex-wrap gap-3 px-4 py-3 rounded-xl border border-border/50 font-mono text-xs"
+          style={{ background: isDark ? "rgba(0,0,0,0.4)" : "rgba(240,244,240,0.8)" }}
+          aria-label="Top contributing countries"
+        >
+          {topCountries.map((item) => {
+            const code = NAME_TO_CODE[item.country] || "??"
+            const color = countryColor(code)
+            const widthPct = (item.count / topCountries[0].count) * 100
+            return (
+              <div key={item.country} className="flex items-center gap-2 min-w-[160px] max-w-xs flex-1">
+                <span
+                  className="shrink-0"
+                  style={{ width: 10, height: 10, background: color, display: "inline-block" }}
+                />
+                <span className="opacity-70 w-6 shrink-0">{code}</span>
+                <div className="flex-1 flex flex-col gap-0.5">
+                  <div className="flex justify-between">
+                    <span className="text-foreground font-semibold">{item.count.toLocaleString()}</span>
+                    <span className="opacity-50">{item.percentage.toFixed(1)}%</span>
+                  </div>
+                  <div
+                    className="h-0.5 rounded"
+                    style={{ background: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)", width: "100%" }}
+                  >
+                    <div
+                      className="h-full rounded"
+                      style={{ width: `${widthPct}%`, background: color }}
+                    />
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
