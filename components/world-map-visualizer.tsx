@@ -2,8 +2,8 @@
 
 import { useMemo, useState, useEffect } from "react"
 import dynamic from "next/dynamic"
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from "recharts"
-import { Info, TrendingUp } from "lucide-react"
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts"
+import { Info, TrendingUp, Globe, Users } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import type { LatLngTuple } from "leaflet"
 
@@ -193,12 +193,12 @@ export function WorldMapVisualizer({ data, campaignName }: WorldMapVisualizerPro
     <div className="flex flex-col gap-6">
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Map */}
-        <div className="lg:col-span-2 rounded-lg border border-border overflow-hidden bg-background">
+        <div className="lg:col-span-2 rounded-2xl border border-border/50 overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 shadow-2xl">
           <MapContainer
             center={[20, 0]}
             zoom={2}
             style={{ height: "600px", width: "100%" }}
-            className="z-0"
+            className="z-0 [&_.leaflet-tile]:brightness-75 [&_.leaflet-tile]:contrast-125"
           >
             <TileLayer
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -211,10 +211,10 @@ export function WorldMapVisualizer({ data, campaignName }: WorldMapVisualizerPro
                 center={marker.coords}
                 radius={marker.size}
                 fillColor={marker.color}
-                color={marker.color}
-                weight={2}
-                opacity={0.8}
-                fillOpacity={0.7}
+                color="#ffffff"
+                weight={2.5}
+                opacity={1}
+                fillOpacity={0.8}
               >
                 <Popup>
                   <div className="text-sm font-medium">
@@ -234,45 +234,52 @@ export function WorldMapVisualizer({ data, campaignName }: WorldMapVisualizerPro
 
         {/* Stats Sidebar */}
         <div className="flex flex-col gap-6">
-          <Card>
+          <Card className="border-border/50 bg-gradient-to-br from-slate-900/80 to-slate-800/80 shadow-lg">
             <CardHeader>
-              <CardTitle className="text-lg">Global Reach</CardTitle>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Globe className="size-5 text-emerald-400" />
+                Global Reach
+              </CardTitle>
               {campaignName && <CardDescription>{campaignName}</CardDescription>}
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-baseline gap-2">
-                <div className="text-3xl font-bold text-foreground">{countryCount}</div>
-                <div className="text-sm text-muted-foreground">countries</div>
+            <CardContent className="space-y-6">
+              <div className="flex items-center gap-4 p-4 rounded-lg bg-slate-800/50 border border-slate-700/50">
+                <div className="flex-1">
+                  <p className="text-sm text-muted-foreground mb-1">Countries</p>
+                  <div className="text-4xl font-bold text-emerald-400">{countryCount}</div>
+                </div>
               </div>
-              <div className="flex items-baseline gap-2">
-                <div className="text-3xl font-bold text-foreground">{totalContributions}</div>
-                <div className="text-sm text-muted-foreground">contributions</div>
+              <div className="flex items-center gap-4 p-4 rounded-lg bg-slate-800/50 border border-slate-700/50">
+                <div className="flex-1">
+                  <p className="text-sm text-muted-foreground mb-1">Contributions</p>
+                  <div className="text-4xl font-bold text-emerald-400">{totalContributions}</div>
+                </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-border/50 bg-gradient-to-br from-slate-900/80 to-slate-800/80 shadow-lg">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
-                <TrendingUp className="size-4" />
+                <TrendingUp className="size-4 text-emerald-400" />
                 Top Contributors
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
                 {topCountries.map((item, index) => (
-                  <div key={item.country} className="flex items-center justify-between gap-2">
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-foreground">{index + 1}. {item.country}</p>
-                      <div className="mt-1 h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                  <div key={item.country} className="flex items-center justify-between gap-2 p-2 rounded-lg hover:bg-slate-800/30 transition-colors">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">{index + 1}. {item.country}</p>
+                      <div className="mt-1.5 h-2 w-full rounded-full bg-slate-700 overflow-hidden">
                         <div
-                          className="h-full rounded-full bg-gradient-to-r from-primary to-primary/70"
+                          className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400"
                           style={{ width: `${(item.count / topCountries[0].count) * 100}%` }}
                         />
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-xs font-semibold text-foreground">{item.count}</p>
+                    <div className="text-right flex-shrink-0">
+                      <p className="text-xs font-semibold text-emerald-400">{item.count}</p>
                       <p className="text-xs text-muted-foreground">{item.percentage.toFixed(1)}%</p>
                     </div>
                   </div>
@@ -284,10 +291,10 @@ export function WorldMapVisualizer({ data, campaignName }: WorldMapVisualizerPro
       </div>
 
       {/* Chart */}
-      <Card>
+      <Card className="border-border/50 bg-gradient-to-br from-slate-900/80 to-slate-800/80 shadow-lg">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Info className="size-4" />
+            <Info className="size-4 text-emerald-400" />
             Distribution by Country
           </CardTitle>
           <CardDescription>Top 15 countries by contribution count</CardDescription>
@@ -295,28 +302,30 @@ export function WorldMapVisualizer({ data, campaignName }: WorldMapVisualizerPro
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={data.slice(0, 15)}>
-              <CartesianGrid strokeDasharray="3 3" />
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(215, 13%, 27%)" vertical={false} />
               <XAxis 
                 dataKey="country" 
                 angle={-45} 
                 textAnchor="end" 
                 height={120} 
-                tick={{ fontSize: 12 }}
+                tick={{ fontSize: 12, fill: "hsl(215, 13%, 60%)" }}
               />
-              <YAxis />
+              <YAxis tick={{ fontSize: 12, fill: "hsl(215, 13%, 60%)" }} />
               <Tooltip 
                 contentStyle={{
-                  backgroundColor: "hsl(var(--background))",
-                  border: "1px solid hsl(var(--border))",
+                  backgroundColor: "hsl(215, 27%, 18%)",
+                  border: "1px solid hsl(215, 13%, 27%)",
                   borderRadius: "0.5rem",
+                  boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.3)",
                 }}
                 formatter={(value: number) => [value, "Contributions"]}
+                labelStyle={{ color: "hsl(215, 13%, 60%)" }}
               />
-              <Bar dataKey="count" fill="hsl(var(--primary))" radius={[8, 8, 0, 0]}>
+              <Bar dataKey="count" fill="#10b981" radius={[8, 8, 0, 0]}>
                 {data.slice(0, 15).map((entry, index) => (
                   <Cell
                     key={`cell-${index}`}
-                    fill={`hsl(${(index / 15) * 360}, 70%, 50%)`}
+                    fill={`hsl(${160 + (index % 10) * 5}, 80%, ${55 - (index % 10) * 3}%)`}
                   />
                 ))}
               </Bar>
