@@ -6,7 +6,8 @@ import { SiteFooter } from "@/components/site-footer"
 import { WorldMapVisualizer } from "@/components/world-map-visualizer"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { getContributionsByCountry } from "@/lib/queries"
+import { getContributionsByCountry, getCampaigns } from "@/lib/queries"
+import { CampaignFilterClient } from "@/components/campaign-filter-client"
 
 export const dynamic = "force-dynamic"
 
@@ -16,12 +17,12 @@ export const metadata = {
     "Visualize campaign contributions from around the world. See where voices are coming from in the collective poetry movement.",
 }
 
-async function MapContent() {
-  const data = await getContributionsByCountry()
+async function MapContent({ campaignId }: { campaignId?: string }) {
+  const data = await getContributionsByCountry(campaignId)
   
   if (!data || data.length === 0) {
     return (
-      <Card className="border-dashed">
+      <Card className="border-dashed border-border/50 bg-gradient-to-br from-slate-900/50 to-slate-800/50">
         <CardHeader>
           <CardTitle>No Contributions Yet</CardTitle>
           <CardDescription>
@@ -37,7 +38,8 @@ async function MapContent() {
     )
   }
 
-  return <WorldMapVisualizer data={data} campaignName="Global Contributions" />
+  const campaignName = campaignId ? (await getCampaigns()).find(c => c.id === campaignId)?.title : "All Campaigns"
+  return <WorldMapVisualizer data={data} campaignName={campaignName} />
 }
 
 function MapSkeleton() {
@@ -49,19 +51,27 @@ function MapSkeleton() {
   )
 }
 
-export default function VisualizePage() {
+export default async function VisualizePage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}) {
+  const params = await searchParams
+  const campaignId = typeof params.campaign === "string" ? params.campaign : undefined
+  const campaigns = await getCampaigns()
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <SiteHeader />
       
       <main className="flex-1 mx-auto w-full max-w-7xl px-6 py-8 sm:py-12">
         {/* Header */}
-        <div className="mb-8 flex items-center justify-between gap-4">
+        <div className="mb-8 space-y-4">
+          <Link href="/" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <ArrowLeft className="size-4" />
+            Back to home
+          </Link>
           <div>
-            <Link href="/" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-3 transition-colors">
-              <ArrowLeft className="size-4" />
-              Back to home
-            </Link>
             <h1 className="text-3xl sm:text-4xl font-bold text-balance">
               Global Contributions
             </h1>
@@ -71,9 +81,16 @@ export default function VisualizePage() {
           </div>
         </div>
 
+        {/* Campaign Filter */}
+        {campaigns.length > 0 && (
+          <div className="mb-8">
+            <CampaignFilterClient campaigns={campaigns} selectedCampaignId={campaignId} />
+          </div>
+        )}
+
         {/* Map Visualization */}
         <Suspense fallback={<MapSkeleton />}>
-          <MapContent />
+          <MapContent campaignId={campaignId} />
         </Suspense>
 
         {/* Info Section */}
