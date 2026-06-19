@@ -25,12 +25,12 @@ export function SiteHeader() {
           >
             Home
           </Link>
-          <a
-            href="#campaigns"
+          <Link
+            href="/about"
             className="rounded-md px-3 py-2 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            Campaigns
-          </a>
+            About
+          </Link>
           <Link
             href="/visualize"
             className="rounded-md px-3 py-2 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -38,10 +38,10 @@ export function SiteHeader() {
             Map
           </Link>
           <Link
-            href="/about"
+            href="/contact"
             className="rounded-md px-3 py-2 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            About
+            Contact
           </Link>
         </nav>
 
@@ -51,7 +51,7 @@ export function SiteHeader() {
             size="sm"
             nativeButton={false}
             className="hidden sm:inline-flex"
-            render={<Link href="/campaign/two-lines-for-the-earth#contribute">Add your lines</Link>}
+            render={<Link href="/#campaigns">Campaigns</Link>}
           />
         </div>
       </div>
