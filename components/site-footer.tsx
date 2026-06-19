@@ -20,34 +20,40 @@ export function SiteFooter() {
             Home
           </Link>
           <Link
-            href="/#campaigns"
-            className="rounded-md transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            Campaigns
-          </Link>
-          <Link
             href="/about"
             className="rounded-md transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             About
           </Link>
           <Link
-            href="/dashboard"
+            href="/#campaigns"
             className="rounded-md transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            Moderation
+            Campaigns
           </Link>
           <Link
-            href="/contact"
+            href="/visualize"
             className="rounded-md transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            Contact
+            Map
           </Link>
           <Link
             href="/terms"
             className="rounded-md transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             Terms
+          </Link>
+          <Link
+            href="/dashboard"
+            className="rounded-md transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            Admin
+          </Link>
+          <Link
+            href="/contact"
+            className="rounded-md transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            Contact
           </Link>
         </nav>
       </div>

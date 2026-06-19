@@ -1,11 +1,10 @@
 import { Suspense } from "react"
 import Link from "next/link"
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeft, MousePointerClick, ZoomIn, Layers, Globe } from "lucide-react"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { WorldMapVisualizer } from "@/components/world-map-visualizer"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { getContributionsByCountry, getCampaigns } from "@/lib/queries"
 import { CampaignFilterClient } from "@/components/campaign-filter-client"
 
@@ -94,28 +93,52 @@ export default async function VisualizePage({
         </Suspense>
 
         {/* Info Section */}
-        <div className="mt-12 grid gap-6 md:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Interactive Map</CardTitle>
+        <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Card className="border-border/50">
+            <CardHeader className="pb-2">
+              <div className="flex items-center gap-2">
+                <MousePointerClick className="size-4 text-primary shrink-0" aria-hidden="true" />
+                <CardTitle className="text-sm font-semibold">Hover to Explore</CardTitle>
+              </div>
             </CardHeader>
-            <CardContent className="space-y-2 text-sm text-muted-foreground">
-              <p>
-                Hover over or click on any country bubble to see the number of approved contributions from that region. The size of each bubble represents the volume of contributions.
-              </p>
-              <p className="text-xs">Use your mouse to pan and scroll to zoom in on specific regions.</p>
+            <CardContent className="text-sm text-muted-foreground leading-relaxed">
+              Move your cursor over any country to see its name, number of approved couplets, and share of total contributions.
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">What You&apos;re Seeing</CardTitle>
+          <Card className="border-border/50">
+            <CardHeader className="pb-2">
+              <div className="flex items-center gap-2">
+                <ZoomIn className="size-4 text-primary shrink-0" aria-hidden="true" />
+                <CardTitle className="text-sm font-semibold">Zoom &amp; Pan</CardTitle>
+              </div>
             </CardHeader>
-            <CardContent className="space-y-2 text-sm text-muted-foreground">
-              <p>
-                Each colored bubble represents a country. The data includes all approved contributions across campaigns, aggregated by the contributor&apos;s country of residence.
-              </p>
-              <p className="text-xs">Colors and sizes are normalized to show relative distribution patterns.</p>
+            <CardContent className="text-sm text-muted-foreground leading-relaxed">
+              Scroll your mouse wheel to zoom into any region. Click and drag to pan around and explore different parts of the world.
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/50">
+            <CardHeader className="pb-2">
+              <div className="flex items-center gap-2">
+                <Layers className="size-4 text-primary shrink-0" aria-hidden="true" />
+                <CardTitle className="text-sm font-semibold">What You&apos;re Seeing</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="text-sm text-muted-foreground leading-relaxed">
+              Country fills darken proportionally to contribution volume. Lighter shades show fewer contributions, darker shades show more.
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/50">
+            <CardHeader className="pb-2">
+              <div className="flex items-center gap-2">
+                <Globe className="size-4 text-primary shrink-0" aria-hidden="true" />
+                <CardTitle className="text-sm font-semibold">Data Source</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="text-sm text-muted-foreground leading-relaxed">
+              Only approved couplets are counted. Data is aggregated by contributor&apos;s self-reported country of residence across all active campaigns.
             </CardContent>
           </Card>
         </div>
