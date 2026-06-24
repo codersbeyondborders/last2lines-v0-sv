@@ -1,210 +1,109 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 900">
+<svg viewBox="0 0 1400 900" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <style>
-      .layer-label { font-size: 14px; font-weight: bold; fill: #1a1a1a; }
+      .layer-title { font-size: 14px; font-weight: bold; fill: #1f2937; }
+      .layer-text { font-size: 12px; fill: #374151; }
+      .layer-label { font-size: 11px; fill: #6b7280; }
+      .arrow { stroke: #9ca3af; stroke-width: 2; fill: none; marker-end: url(#arrowhead); }
       .box { stroke-width: 2; }
-      .client-box { fill: #e8f5e9; stroke: #2e7d32; }
-      .vercel-box { fill: #e3f2fd; stroke: #1565c0; }
-      .cache-box { fill: #f3e5f5; stroke: #6a1b9a; }
-      .function-box { fill: #fff3e0; stroke: #e65100; }
-      .db-box { fill: #fce4ec; stroke: #c2185b; }
-      .external-box { fill: #ede7f6; stroke: #512da8; }
-      .text-label { font-size: 12px; fill: #1a1a1a; text-anchor: middle; }
-      .connector { stroke: #666; stroke-width: 2; fill: none; marker-end: url(#arrowhead); }
-      .connector-label { font-size: 10px; fill: #666; }
-      .section-title { font-size: 16px; font-weight: bold; fill: #1a1a1a; }
     </style>
     <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
-      <polygon points="0 0, 10 3, 0 6" fill="#666" />
+      <polygon points="0 0, 10 3, 0 6" fill="#9ca3af"/>
     </marker>
   </defs>
 
-  <!-- Background sections -->
-  <rect x="10" y="10" width="380" height="880" fill="#f5f5f5" stroke="#ccc" stroke-width="1" rx="5" opacity="0.3"/>
-  <rect x="400" y="10" width="500" height="880" fill="#f5f5f5" stroke="#ccc" stroke-width="1" rx="5" opacity="0.3"/>
-  <rect x="910" y="10" width="480" height="880" fill="#f5f5f5" stroke="#ccc" stroke-width="1" rx="5" opacity="0.3"/>
+  <!-- Background -->
+  <rect width="1400" height="900" fill="#f9fafb"/>
 
-  <!-- Section titles -->
-  <text x="200" y="35" class="section-title">CLIENT & CDN</text>
-  <text x="650" y="35" class="section-title">VERCEL EDGE & SERVERLESS</text>
-  <text x="1150" y="35" class="section-title">BACKEND & SERVICES</text>
+  <!-- Title -->
+  <text x="700" y="30" text-anchor="middle" style="font-size: 24px; font-weight: bold; fill: #1f2937;">
+    Last2Lines — Production Architecture on Vercel
+  </text>
 
-  <!-- ==================== LAYER 1: CLIENT ==================== -->
-  <rect x="30" y="60" width="140" height="60" class="box client-box" rx="5"/>
-  <text x="100" y="85" class="text-label">Browser</text>
-  <text x="100" y="103" class="text-label" font-size="10">Request</text>
+  <!-- Layer 1: Client -->
+  <rect x="50" y="80" width="1300" height="80" class="box" fill="#dbeafe" stroke="#3b82f6"/>
+  <text x="70" y="105" class="layer-title">Client Layer</text>
+  <text x="70" y="125" class="layer-text">Browser Requests • Web Vitals Tracking (Speed Insights) • User Analytics Collection</text>
+  <text x="70" y="145" class="layer-label">Vercel's CDN edge nodes detect geography and route requests to optimal edge location</text>
 
-  <!-- ==================== LAYER 2: VERCEL EDGE ==================== -->
-  <!-- Middleware -->
-  <rect x="420" y="60" width="120" height="60" class="box vercel-box" rx="5"/>
-  <text x="480" y="85" class="text-label">Middleware</text>
-  <text x="480" y="103" class="text-label" font-size="10">(Edge Runtime)</text>
+  <!-- Arrow 1 -->
+  <path d="M 700 160 L 700 200" class="arrow"/>
 
-  <!-- ISR Cache -->
-  <rect x="600" y="60" width="120" height="60" class="box cache-box" rx="5"/>
-  <text x="660" y="85" class="text-label">ISR Cache</text>
-  <text x="660" y="103" class="text-label" font-size="10">Vercel Edge</text>
+  <!-- Layer 2: Vercel Edge -->
+  <rect x="50" y="200" width="1300" height="100" class="box" fill="#e0e7ff" stroke="#6366f1"/>
+  <text x="70" y="225" class="layer-title">Vercel Edge (Middleware + ISR Cache + OG Images)</text>
+  <text x="70" y="245" class="layer-text">Middleware (Edge Runtime): Supabase session refresh only on /dashboard, /admin, /auth, /api routes</text>
+  <text x="70" y="260" class="layer-text">ISR Cache: 60s (homepage), 30s (campaigns), 86400s (static). Invocation Shielding active.</text>
+  <text x="70" y="275" class="layer-text">OG Image Generation: Dynamic social preview images via opengraph-image.tsx</text>
+  <text x="70" y="290" class="layer-label">Skew Protection enabled: prevents stale client JS from mismatching new deployments</text>
 
-  <!-- OG Image Gen -->
-  <rect x="780" y="60" width="120" height="60" class="box vercel-box" rx="5"/>
-  <text x="840" y="85" class="text-label">OG Images</text>
-  <text x="840" y="103" class="text-label" font-size="10">next/og</text>
+  <!-- Arrow 2 -->
+  <path d="M 700 300 L 700 340" class="arrow"/>
 
-  <!-- Connectors from browser to edge -->
-  <path d="M 170 90 L 420 90" class="connector"/>
-  <text x="295" y="85" class="connector-label">Route matching</text>
+  <!-- Layer 3: Next.js Pages -->
+  <g>
+    <rect x="50" y="340" width="620" height="100" class="box" fill="#ddd6fe" stroke="#8b5cf6"/>
+    <text x="70" y="365" class="layer-title">Next.js Pages (RSC + Streaming SSR)</text>
+    <text x="70" y="385" class="layer-text">Public: /, /campaign/[slug], /about, /contact, /terms, /visualize</text>
+    <text x="70" y="400" class="layer-text">Protected: /dashboard/*, /admin/* (require Supabase auth)</text>
+    <text x="70" y="415" class="layer-text">loading.tsx: Skeleton UI renders instantly, data fetches in parallel</text>
+    <text x="70" y="430" class="layer-label">Streaming boundaries with Suspense reduce TTFB to 200–300ms</text>
 
-  <!-- ==================== LAYER 3: NEXTJS PAGES ==================== -->
-  <!-- Public Pages -->
-  <rect x="30" y="170" width="360" height="100" class="box vercel-box" rx="5"/>
-  <text x="210" y="195" class="text-label" font-size="12">Public Pages (ISR + Streaming)</text>
-  <rect x="45" y="205" width="80" height="35" class="box cache-box" rx="3" stroke-width="1"/>
-  <text x="85" y="228" class="text-label" font-size="10">/ (60s)</text>
+    <rect x="730" y="340" width="620" height="100" class="box" fill="#fce7f3" stroke="#ec4899"/>
+    <text x="750" y="365" class="layer-title">API Routes (Auth + Transactional)</text>
+    <text x="750" y="385" class="layer-text">Auth: /auth/callback (Supabase), /verify-otp, /send-otp, /send-verification-email</text>
+    <text x="750" y="400" class="layer-text">Upload: /api/upload (Vercel Blob, 30s timeout)</text>
+    <text x="750" y="415" class="layer-text">Admin: /api/migrate-otps, /api/seed-campaigns (60s timeout)</text>
+    <text x="750" y="430" class="layer-label">All responses: Cache-Control: no-cache, no-store, must-revalidate</text>
+  </g>
 
-  <rect x="135" y="205" width="80" height="35" class="box cache-box" rx="3" stroke-width="1"/>
-  <text x="175" y="228" class="text-label" font-size="10">/campaign (30s)</text>
+  <!-- Arrow 3 -->
+  <path d="M 360 440 L 360 480" class="arrow"/>
+  <path d="M 1040 440 L 1040 480" class="arrow"/>
 
-  <rect x="225" y="205" width="80" height="35" class="box cache-box" rx="3" stroke-width="1"/>
-  <text x="265" y="228" class="text-label" font-size="10">/about (24h)</text>
+  <!-- Layer 4: Database -->
+  <rect x="50" y="480" width="1300" height="100" class="box" fill="#fecaca" stroke="#f87171"/>
+  <text x="70" y="505" class="layer-title">AWS RDS Aurora PostgreSQL (with Connection Pooling)</text>
+  <text x="70" y="525" class="layer-text">attachDatabasePool() manages connections across serverless invocations</text>
+  <text x="70" y="540" class="layer-text">withConnection() helper ensures atomic transactions on same client</text>
+  <text x="70" y="555" class="layer-text">SSL enabled: rejectUnauthorized = false; Principle of Least Privilege (IAM OIDC)</text>
+  <text x="70" y="570" class="layer-label">Tables: campaigns, contributions, email_otps, verification_tokens</text>
 
-  <rect x="315" y="205" width="80" height="35" class="box cache-box" rx="3" stroke-width="1"/>
-  <text x="355" y="228" class="text-label" font-size="10">loading.tsx</text>
+  <!-- Arrow 4 -->
+  <path d="M 700 580 L 700 620" class="arrow"/>
 
-  <!-- Protected Pages -->
-  <rect x="30" y="290" width="360" height="80" class="box vercel-box" rx="5"/>
-  <text x="210" y="315" class="text-label" font-size="12">Protected Pages (Auth Required)</text>
-  <rect x="45" y="335" width="160" height="25" class="box vercel-box" rx="3" stroke-width="1"/>
-  <text x="125" y="352" class="text-label" font-size="10">/dashboard</text>
+  <!-- Layer 5: External Services -->
+  <g>
+    <rect x="50" y="620" width="400" height="100" class="box" fill="#dbeafe" stroke="#0ea5e9"/>
+    <text x="70" y="645" class="layer-title">Email Service</text>
+    <text x="70" y="665" class="layer-text">Resend API: OTP codes, verification links, email notifications</text>
+    <text x="70" y="680" class="layer-text">Integrated via /api/send-otp and /api/send-verification-email</text>
+    <text x="70" y="695" class="layer-text">Retries on failure; error alerts to Sentry via @vercel/otel</text>
+    <text x="70" y="710" class="layer-label">Max timeout: 10s</text>
 
-  <rect x="225" y="335" width="160" height="25" class="box vercel-box" rx="3" stroke-width="1"/>
-  <text x="305" y="352" class="text-label" font-size="10">/admin</text>
+    <rect x="500" y="620" width="400" height="100" class="box" fill="#bbf7d0" stroke="#10b981"/>
+    <text x="520" y="645" class="layer-title">File Storage</text>
+    <text x="520" y="665" class="layer-text">Vercel Blob: Campaign images, user-uploaded assets</text>
+    <text x="520" y="680" class="layer-text">Integrated via /api/upload; images optimized via next/image</text>
+    <text x="520" y="695" class="layer-text">AVIF/WebP formats; responsive optimization per device</text>
+    <text x="520" y="710" class="layer-label">Max timeout: 30s</text>
 
-  <!-- Connectors -->
-  <path d="M 100 120 L 100 170" class="connector"/>
-  <text x="65" y="150" class="connector-label">Public</text>
+    <rect x="950" y="620" width="400" height="100" class="box" fill="#fef3c7" stroke="#f59e0b"/>
+    <text x="970" y="645" class="layer-title">Observability</text>
+    <text x="970" y="665" class="layer-text">@vercel/otel: Traces, spans, error attribution across Supabase + Resend</text>
+    <text x="970" y="680" class="layer-text">instrumentation.ts: Service registration with propagated context</text>
+    <text x="970" y="695" class="layer-text">Speed Insights: LCP, INP, CLS in production; Web Analytics: funnel tracking</text>
+    <text x="970" y="710" class="layer-label">Vercel Dashboard + Sentry integration</text>
+  </g>
 
-  <path d="M 660 120 L 660 170" class="connector"/>
-  <text x="625" y="150" class="connector-label">Cached</text>
+  <!-- Arrow 5 -->
+  <path d="M 700 720 L 700 760" class="arrow"/>
 
-  <path d="M 480 120 L 120 290" class="connector"/>
-  <text x="280" y="200" class="connector-label">Session check</text>
-
-  <!-- ==================== LAYER 4: API ROUTES ==================== -->
-  <!-- API Routes -->
-  <rect x="420" y="170" width="470" height="200" class="box function-box" rx="5"/>
-  <text x="655" y="195" class="text-label" font-size="12">API Routes (Fluid Compute)</text>
-
-  <!-- Auth & Email -->
-  <rect x="435" y="210" width="100" height="40" class="box function-box" rx="3" stroke-width="1"/>
-  <text x="485" y="233" class="text-label" font-size="10">send-otp (10s)</text>
-
-  <rect x="545" y="210" width="100" height="40" class="box function-box" rx="3" stroke-width="1"/>
-  <text x="595" y="233" class="text-label" font-size="10">verify-otp (10s)</text>
-
-  <rect x="655" y="210" width="110" height="40" class="box function-box" rx="3" stroke-width="1"/>
-  <text x="710" y="233" class="text-label" font-size="10">send-email (10s)</text>
-
-  <rect x="775" y="210" width="100" height="40" class="box function-box" rx="3" stroke-width="1"/>
-  <text x="825" y="233" class="text-label" font-size="10">callback (10s)</text>
-
-  <!-- Upload & Admin -->
-  <rect x="435" y="265" width="100" height="40" class="box function-box" rx="3" stroke-width="1"/>
-  <text x="485" y="288" class="text-label" font-size="10">upload (30s)</text>
-
-  <rect x="545" y="265" width="100" height="40" class="box function-box" rx="3" stroke-width="1"/>
-  <text x="595" y="288" class="text-label" font-size="10">migrate (60s)</text>
-
-  <rect x="655" y="265" width="110" height="40" class="box function-box" rx="3" stroke-width="1"/>
-  <text x="710" y="288" class="text-label" font-size="10">seed-data (60s)</text>
-
-  <rect x="775" y="265" width="100" height="40" class="box function-box" rx="3" stroke-width="1"/>
-  <text x="825" y="288" class="text-label" font-size="10">verify-email</text>
-
-  <!-- Cache Headers note -->
-  <rect x="435" y="315" width="440" height="40" fill="none" stroke="#e65100" stroke-width="1" stroke-dasharray="4,4" rx="3"/>
-  <text x="655" y="335" class="text-label" font-size="10">All responses: Cache-Control: no-cache, no-store, must-revalidate</text>
-
-  <!-- Connectors -->
-  <path d="M 210 370 L 500 170" class="connector"/>
-  <text x="340" y="260" class="connector-label">Middleware</text>
-
-  <!-- ==================== LAYER 5: DATABASE ==================== -->
-  <!-- PostgreSQL with pooling -->
-  <rect x="930" y="60" width="200" height="100" class="box db-box" rx="5"/>
-  <text x="1030" y="85" class="text-label">PostgreSQL</text>
-  <text x="1030" y="103" class="text-label" font-size="10">AWS Aurora</text>
-  <text x="1030" y="121" class="text-label" font-size="10">+ Connection Pool</text>
-
-  <!-- Connector from API to DB -->
-  <path d="M 890 250 L 930 120" class="connector"/>
-  <text x="895" y="180" class="connector-label">Queries with</text>
-  <text x="895" y="195" class="connector-label">withConnection</text>
-
-  <!-- ==================== LAYER 6: EXTERNAL SERVICES ==================== -->
-  <!-- Resend -->
-  <rect x="930" y="200" width="200" height="80" class="box external-box" rx="5"/>
-  <text x="1030" y="230" class="text-label" font-size="12">Resend</text>
-  <text x="1030" y="250" class="text-label" font-size="10">Email Service</text>
-  <path d="M 890 230 L 930 230" class="connector"/>
-
-  <!-- Vercel Blob -->
-  <rect x="930" y="310" width="200" height="80" class="box external-box" rx="5"/>
-  <text x="1030" y="340" class="text-label" font-size="12">Vercel Blob</text>
-  <text x="1030" y="360" class="text-label" font-size="10">File Storage</text>
-  <path d="M 890 290 L 930 350" class="connector"/>
-
-  <!-- ==================== LAYER 7: OBSERVABILITY ==================== -->
-  <rect x="930" y="420" width="440" height="120" class="box vercel-box" rx="5"/>
-  <text x="1150" y="445" class="text-label" font-size="12">Observability &amp; Monitoring</text>
-
-  <rect x="945" y="460" width="130" height="30" class="box vercel-box" rx="3" stroke-width="1"/>
-  <text x="1010" y="480" class="text-label" font-size="10">@vercel/otel</text>
-
-  <rect x="1085" y="460" width="130" height="30" class="box vercel-box" rx="3" stroke-width="1"/>
-  <text x="1150" y="480" class="text-label" font-size="10">Speed Insights</text>
-
-  <rect x="1225" y="460" width="130" height="30" class="box vercel-box" rx="3" stroke-width="1"/>
-  <text x="1290" y="480" class="text-label" font-size="10">Web Analytics</text>
-
-  <text x="1150" y="510" class="text-label" font-size="10">Tracing • Error Attribution • Core Web Vitals</text>
-
-  <!-- Connector from API to observability -->
-  <path d="M 890 200 L 930 480" class="connector"/>
-  <text x="895" y="340" class="connector-label">Instrumentation</text>
-
-  <!-- ==================== LAYER 8: PERFORMANCE FEATURES ==================== -->
-  <rect x="930" y="570" width="440" height="110" class="box cache-box" rx="5"/>
-  <text x="1150" y="595" class="text-label" font-size="12">Performance &amp; Security</text>
-
-  <rect x="945" y="610" width="100" height="30" class="box cache-box" rx="3" stroke-width="1"/>
-  <text x="995" y="630" class="text-label" font-size="10">Skew Protect</text>
-
-  <rect x="1055" y="610" width="100" height="30" class="box cache-box" rx="3" stroke-width="1"/>
-  <text x="1105" y="630" class="text-label" font-size="10">Image Opt</text>
-
-  <rect x="1165" y="610" width="100" height="30" class="box cache-box" rx="3" stroke-width="1"/>
-  <text x="1215" y="630" class="text-label" font-size="10">SSL/RLS</text>
-
-  <rect x="1275" y="610" width="100" height="30" class="box cache-box" rx="3" stroke-width="1"/>
-  <text x="1325" y="630" class="text-label" font-size="10">Edge Middleware</text>
-
-  <!-- ==================== LEGEND ==================== -->
-  <rect x="30" y="700" width="1340" height="180" class="box" fill="#fafafa" stroke="#ccc" stroke-width="1" rx="5"/>
-
-  <text x="50" y="730" class="section-title">Architecture Features by Layer</text>
-
-  <text x="50" y="765" class="text-label" font-size="11" text-anchor="start" font-weight="bold">Client Layer:</text>
-  <text x="50" y="785" class="text-label" font-size="10" text-anchor="start">Browser sends requests → Vercel Edge processes routing</text>
-
-  <text x="50" y="810" class="text-label" font-size="11" text-anchor="start" font-weight="bold">Edge Layer:</text>
-  <text x="50" y="830" class="text-label" font-size="10" text-anchor="start">Middleware (narrowed matcher) validates sessions on protected routes only • ISR serves cached pages • OG images generated on-demand</text>
-
-  <text x="700" y="765" class="text-label" font-size="11" text-anchor="start" font-weight="bold">Serverless Layer:</text>
-  <text x="700" y="785" class="text-label" font-size="10" text-anchor="start">All API routes have maxDuration timeouts • Responses include Cache-Control headers to prevent stale state</text>
-
-  <text x="700" y="810" class="text-label" font-size="11" text-anchor="start" font-weight="bold">Backend Layer:</text>
-  <text x="700" y="830" class="text-label" font-size="10" text-anchor="start">PostgreSQL with connection pooling • withConnection helper for atomic transactions • SSL encryption • @vercel/otel tracing across all services</text>
-
-  <!-- Version info -->
-  <text x="700" y="855" class="text-label" font-size="9" text-anchor="start" fill="#999">Last2Lines v0 • Vercel Optimized • AWS Aurora PostgreSQL • Production-Ready</text>
+  <!-- Layer 6: Performance and Security -->
+  <rect x="50" y="760" width="1300" height="100" class="box" fill="#e9d5ff" stroke="#a855f7"/>
+  <text x="70" y="785" class="layer-title">Performance, Security, and Caching Strategy</text>
+  <text x="70" y="805" class="layer-text">Fluid Compute (maxDuration): Auto-scales function runtime; 10s (auth/DB), 30s (upload), 60s (migrations) prevent cold starts</text>
+  <text x="70" y="820" class="layer-text">Skew Protection: deploymentId pins assets to exact deployment; Image Optimization: WebP/AVIF + responsive sizing</text>
+  <text x="70" y="835" class="layer-text">ISR Cache Shield: During traffic surges, only one function instance fetches; others serve cached response</text>
+  <text x="70" y="850" class="layer-label">Combined: handles 100 to 100K concurrent users without architectural changes</text>
 </svg>
