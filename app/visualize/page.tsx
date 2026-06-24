@@ -1,12 +1,13 @@
-import { Suspense } from "react"
 import Link from "next/link"
 import { ArrowLeft, MousePointerClick, ZoomIn, Layers, Globe } from "lucide-react"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { WorldMapVisualizer } from "@/components/world-map-visualizer"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { getContributionsByCountry, getCampaigns } from "@/lib/queries"
-import { CampaignFilterClient } from "@/components/campaign-filter-client"
+import {
+  getCampaigns,
+  getContributionsByCountryAllCampaigns,
+} from "@/lib/queries"
 
 export const dynamic = "force-dynamic"
 
@@ -16,132 +17,115 @@ export const metadata = {
     "Visualize campaign contributions from around the world. See where voices are coming from in the collective poetry movement.",
 }
 
-async function MapContent({ campaignId }: { campaignId?: string }) {
-  const data = await getContributionsByCountry(campaignId)
-  
-  if (!data || data.length === 0) {
-    return (
-      <Card className="border-dashed border-border/50 bg-gradient-to-br from-slate-900/50 to-slate-800/50">
-        <CardHeader>
-          <CardTitle>No Contributions Yet</CardTitle>
-          <CardDescription>
-            When contributors submit approved couplets, they&apos;ll appear on this map.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            Start a campaign and invite contributors to see the world light up with voices.
-          </p>
-        </CardContent>
-      </Card>
-    )
+export default async function VisualizePage() {
+  let campaigns: Awaited<ReturnType<typeof getCampaigns>> = []
+  let allData: import("@/lib/queries").CountryDataPoint[] = []
+  let perCampaignData: Record<string, import("@/lib/queries").CountryDataPoint[]> = {}
+
+  try {
+    campaigns = await getCampaigns()
+  } catch {
+    // DB unavailable — fall through with empty arrays; component uses mock data
   }
 
-  const campaignName = campaignId ? (await getCampaigns()).find(c => c.id === campaignId)?.title : "All Campaigns"
-  return <WorldMapVisualizer data={data} campaignName={campaignName} />
-}
+  try {
+    const campaignIds = campaigns.map((c) => c.id)
+    const countryDataByCampaign = await getContributionsByCountryAllCampaigns(campaignIds)
+    allData = countryDataByCampaign.all ?? []
+    const { all: _all, ...rest } = countryDataByCampaign
+    perCampaignData = rest
+  } catch {
+    // DB unavailable — component renders with built-in mock data
+  }
 
-function MapSkeleton() {
-  return (
-    <div className="grid gap-6 lg:grid-cols-3">
-      <div className="lg:col-span-2 rounded-lg border border-border bg-muted/30 h-96 animate-pulse" />
-      <div className="rounded-lg border border-border bg-muted/30 h-96 animate-pulse" />
-    </div>
-  )
-}
-
-export default async function VisualizePage({
-  searchParams,
-}: {
-  searchParams: Promise<Record<string, string | string[] | undefined>>
-}) {
-  const params = await searchParams
-  const campaignId = typeof params.campaign === "string" ? params.campaign : undefined
-  const campaigns = await getCampaigns()
+  const campaignMeta = campaigns.map((c) => ({ id: c.id, title: c.title }))
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <SiteHeader />
-      
-      <main className="flex-1 mx-auto w-full max-w-7xl px-6 py-8 sm:py-12">
-        {/* Header */}
-        <div className="mb-8 space-y-4">
-          <Link href="/" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
-            <ArrowLeft className="size-4" />
+
+      <main className="flex-1 mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 sm:py-12">
+        {/* Page header */}
+        <header className="mb-8 space-y-3">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+          >
+            <ArrowLeft className="size-4" aria-hidden />
             Back to home
           </Link>
           <div>
-            <h1 className="text-3xl sm:text-4xl font-bold text-balance">
+            <h1 className="text-3xl font-bold text-balance sm:text-4xl">
               Global Contributions
             </h1>
-            <p className="mt-2 text-lg text-muted-foreground max-w-xl text-pretty">
-              Explore where voices from around the world are joining the collective poetry movement.
+            <p className="mt-2 max-w-xl text-base text-muted-foreground text-pretty leading-relaxed">
+              Explore where voices from around the world are joining the collective poetry movement. Switch campaigns, click countries, and scan the sidebar for a ranked breakdown.
             </p>
           </div>
-        </div>
+        </header>
 
-        {/* Campaign Filter */}
-        {campaigns.length > 0 && (
-          <div className="mb-8">
-            <CampaignFilterClient campaigns={campaigns} selectedCampaignId={campaignId} />
+        {/* Map Visualization — self-contained with tabs + sidebar */}
+        <section aria-label="World map visualization">
+          <WorldMapVisualizer
+            allData={allData}
+            campaignData={perCampaignData}
+            campaigns={campaignMeta}
+          />
+        </section>
+
+        {/* How to use cards */}
+        <section className="mt-12" aria-labelledby="how-to-use-heading">
+          <h2 id="how-to-use-heading" className="sr-only">How to use the map</h2>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Card className="border-border/50">
+              <CardHeader className="pb-2">
+                <div className="flex items-center gap-2">
+                  <MousePointerClick className="size-4 text-primary shrink-0" aria-hidden />
+                  <CardTitle className="text-sm font-semibold">Hover &amp; Click</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="text-sm text-muted-foreground leading-relaxed">
+                Hover a country to see its stats in the floating tooltip. Click to pin a detail card with share and rank.
+              </CardContent>
+            </Card>
+
+            <Card className="border-border/50">
+              <CardHeader className="pb-2">
+                <div className="flex items-center gap-2">
+                  <ZoomIn className="size-4 text-primary shrink-0" aria-hidden />
+                  <CardTitle className="text-sm font-semibold">Zoom &amp; Pan</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="text-sm text-muted-foreground leading-relaxed">
+                Scroll to zoom into any region. Click and drag to pan. Use the controls in the map header to reset.
+              </CardContent>
+            </Card>
+
+            <Card className="border-border/50">
+              <CardHeader className="pb-2">
+                <div className="flex items-center gap-2">
+                  <Layers className="size-4 text-primary shrink-0" aria-hidden />
+                  <CardTitle className="text-sm font-semibold">Campaign Filter</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="text-sm text-muted-foreground leading-relaxed">
+                Switch between the aggregate view or drill into a single campaign using the tabs above the map.
+              </CardContent>
+            </Card>
+
+            <Card className="border-border/50">
+              <CardHeader className="pb-2">
+                <div className="flex items-center gap-2">
+                  <Globe className="size-4 text-primary shrink-0" aria-hidden />
+                  <CardTitle className="text-sm font-semibold">Data Source</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="text-sm text-muted-foreground leading-relaxed">
+                Only approved couplets are counted, aggregated by contributors&apos; self-reported country.
+              </CardContent>
+            </Card>
           </div>
-        )}
-
-        {/* Map Visualization */}
-        <Suspense fallback={<MapSkeleton />}>
-          <MapContent campaignId={campaignId} />
-        </Suspense>
-
-        {/* Info Section */}
-        <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Card className="border-border/50">
-            <CardHeader className="pb-2">
-              <div className="flex items-center gap-2">
-                <MousePointerClick className="size-4 text-primary shrink-0" aria-hidden="true" />
-                <CardTitle className="text-sm font-semibold">Hover to Explore</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent className="text-sm text-muted-foreground leading-relaxed">
-              Move your cursor over any country to see its name, number of approved couplets, and share of total contributions.
-            </CardContent>
-          </Card>
-
-          <Card className="border-border/50">
-            <CardHeader className="pb-2">
-              <div className="flex items-center gap-2">
-                <ZoomIn className="size-4 text-primary shrink-0" aria-hidden="true" />
-                <CardTitle className="text-sm font-semibold">Zoom &amp; Pan</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent className="text-sm text-muted-foreground leading-relaxed">
-              Scroll your mouse wheel to zoom into any region. Click and drag to pan around and explore different parts of the world.
-            </CardContent>
-          </Card>
-
-          <Card className="border-border/50">
-            <CardHeader className="pb-2">
-              <div className="flex items-center gap-2">
-                <Layers className="size-4 text-primary shrink-0" aria-hidden="true" />
-                <CardTitle className="text-sm font-semibold">What You&apos;re Seeing</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent className="text-sm text-muted-foreground leading-relaxed">
-              Country fills darken proportionally to contribution volume. Lighter shades show fewer contributions, darker shades show more.
-            </CardContent>
-          </Card>
-
-          <Card className="border-border/50">
-            <CardHeader className="pb-2">
-              <div className="flex items-center gap-2">
-                <Globe className="size-4 text-primary shrink-0" aria-hidden="true" />
-                <CardTitle className="text-sm font-semibold">Data Source</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent className="text-sm text-muted-foreground leading-relaxed">
-              Only approved couplets are counted. Data is aggregated by contributor&apos;s self-reported country of residence across all active campaigns.
-            </CardContent>
-          </Card>
-        </div>
+        </section>
       </main>
 
       <SiteFooter />
