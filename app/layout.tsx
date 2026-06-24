@@ -17,10 +17,22 @@ const fraunces = Fraunces({
 })
 
 export const metadata: Metadata = {
-  title: 'Last2Lines — Two Lines for the Earth',
+  title: {
+    default: 'Last2Lines — Two Lines for the Earth',
+    template: '%s · Last2Lines',
+  },
   description:
     'Add your couplet to a living tapestry of collective voice. An AI-powered poetry campaigning platform turning individual whispers into a global chorus for social good.',
   generator: 'v0.app',
+  openGraph: {
+    siteName: 'Last2Lines',
+    type: 'website',
+    locale: 'en_US',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    site: '@last2lines',
+  },
   icons: {
     icon: [
       {

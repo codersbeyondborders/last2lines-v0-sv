@@ -1,5 +1,8 @@
 import type { Metadata } from "next"
 import { SiteHeader } from "@/components/site-header"
+
+// Static content — revalidate once per day.
+export const revalidate = 86400
 import { SiteFooter } from "@/components/site-footer"
 
 export const metadata: Metadata = {

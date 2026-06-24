@@ -1,4 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
+
+// Fluid Compute: DB write + Resend API call.
+export const maxDuration = 10
 import { nanoid } from "nanoid"
 import { query } from "@/lib/db"
 
@@ -13,18 +16,24 @@ export async function POST(request: NextRequest) {
     const { contributionId, email, campaignTitle } = await request.json()
 
     if (!contributionId || !email || !campaignTitle) {
-      return NextResponse.json(
+      const response = NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 },
       )
+      response.headers.set("Cache-Control", "no-cache, no-store, must-revalidate")
+      response.headers.set("Pragma", "no-cache")
+      return response
     }
 
     if (!RESEND_API_KEY) {
       console.error("[v0] RESEND_API_KEY not configured")
-      return NextResponse.json(
+      const response = NextResponse.json(
         { error: "Email service not configured" },
         { status: 500 },
       )
+      response.headers.set("Cache-Control", "no-cache, no-store, must-revalidate")
+      response.headers.set("Pragma", "no-cache")
+      return response
     }
 
     // Generate verification token
@@ -77,18 +86,27 @@ export async function POST(request: NextRequest) {
     if (!response.ok) {
       const error = await response.json()
       console.error("[v0] Resend API error:", error)
-      return NextResponse.json(
+      const errorResponse = NextResponse.json(
         { error: "Failed to send verification email" },
         { status: 500 },
       )
+      errorResponse.headers.set("Cache-Control", "no-cache, no-store, must-revalidate")
+      errorResponse.headers.set("Pragma", "no-cache")
+      return errorResponse
     }
 
-    return NextResponse.json({ ok: true, verificationToken })
+    const successResponse = NextResponse.json({ ok: true, verificationToken })
+    successResponse.headers.set("Cache-Control", "no-cache, no-store, must-revalidate")
+    successResponse.headers.set("Pragma", "no-cache")
+    return successResponse
   } catch (error) {
     console.error("[v0] Send verification email error:", error)
-    return NextResponse.json(
+    const errorResponse = NextResponse.json(
       { error: "Failed to send verification email" },
       { status: 500 },
     )
+    errorResponse.headers.set("Cache-Control", "no-cache, no-store, must-revalidate")
+    errorResponse.headers.set("Pragma", "no-cache")
+    return errorResponse
   }
 }

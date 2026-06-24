@@ -1,4 +1,7 @@
 import { put } from '@vercel/blob'
+
+// Fluid Compute: allow up to 30 s for large file uploads to Vercel Blob.
+export const maxDuration = 30
 import { type NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {
@@ -7,15 +10,21 @@ export async function POST(request: NextRequest) {
     const file = formData.get('file') as File
 
     if (!file) {
-      return NextResponse.json({ error: 'No file provided' }, { status: 400 })
+      const response = NextResponse.json({ error: 'No file provided' }, { status: 400 })
+      response.headers.set("Cache-Control", "no-cache, no-store, must-revalidate")
+      response.headers.set("Pragma", "no-cache")
+      return response
     }
 
     // Validate file type
     if (!['image/png', 'image/jpeg', 'image/jpg'].includes(file.type)) {
-      return NextResponse.json(
+      const response = NextResponse.json(
         { error: 'Only PNG and JPG files are allowed' },
         { status: 400 }
       )
+      response.headers.set("Cache-Control", "no-cache, no-store, must-revalidate")
+      response.headers.set("Pragma", "no-cache")
+      return response
     }
 
     // Convert File to ArrayBuffer then Buffer for Vercel Blob
@@ -29,14 +38,20 @@ export async function POST(request: NextRequest) {
       addRandomSuffix: true,
     })
 
-    return NextResponse.json({ url: blob.url })
+    const response = NextResponse.json({ url: blob.url })
+    response.headers.set("Cache-Control", "no-cache, no-store, must-revalidate")
+    response.headers.set("Pragma", "no-cache")
+    return response
   } catch (error) {
     console.error('Upload error:', error)
     const errorMessage =
       error instanceof Error ? error.message : 'Unknown error'
-    return NextResponse.json(
+    const response = NextResponse.json(
       { error: `Upload failed: ${errorMessage}` },
       { status: 500 }
     )
+    response.headers.set("Cache-Control", "no-cache, no-store, must-revalidate")
+    response.headers.set("Pragma", "no-cache")
+    return response
   }
 }

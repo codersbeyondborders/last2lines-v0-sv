@@ -2,6 +2,8 @@ import { query } from "@/lib/db"
 import { NextResponse } from "next/server"
 
 export const dynamic = "force-dynamic"
+// Fluid Compute: DDL migration may take longer than a typical query.
+export const maxDuration = 60
 
 /** One-time migration: creates the email_otps table. Safe to call multiple times. */
 export async function POST() {
@@ -28,12 +30,18 @@ export async function POST() {
         ON email_otps(expires_at)
     `)
 
-    return NextResponse.json({ ok: true, message: "email_otps table ready" })
+    const response = NextResponse.json({ ok: true, message: "email_otps table ready" })
+    response.headers.set("Cache-Control", "no-cache, no-store, must-revalidate")
+    response.headers.set("Pragma", "no-cache")
+    return response
   } catch (error) {
     console.error("[v0] migrate-otps error:", error)
-    return NextResponse.json(
+    const errorResponse = NextResponse.json(
       { ok: false, error: String(error) },
       { status: 500 },
     )
+    errorResponse.headers.set("Cache-Control", "no-cache, no-store, must-revalidate")
+    errorResponse.headers.set("Pragma", "no-cache")
+    return errorResponse
   }
 }

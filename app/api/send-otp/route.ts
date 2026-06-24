@@ -1,4 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
+
+// Fluid Compute: allow up to 10 s for DB query + optional Resend API call.
+export const maxDuration = 10
 import { createHash, randomInt } from "crypto"
 import { nanoid } from "nanoid"
 import { query } from "@/lib/db"
@@ -19,7 +22,10 @@ export async function POST(request: NextRequest) {
     const { email, campaignId, campaignTitle } = await request.json()
 
     if (!email || !campaignId || !campaignTitle) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
+      const response = NextResponse.json({ error: "Missing required fields" }, { status: 400 })
+      response.headers.set("Cache-Control", "no-cache, no-store, must-revalidate")
+      response.headers.set("Pragma", "no-cache")
+      return response
     }
 
     // Confirm campaign exists
@@ -28,7 +34,10 @@ export async function POST(request: NextRequest) {
       [campaignId],
     )
     if (!campaignRows[0]) {
-      return NextResponse.json({ error: "Campaign not found" }, { status: 404 })
+      const response = NextResponse.json({ error: "Campaign not found" }, { status: 404 })
+      response.headers.set("Cache-Control", "no-cache, no-store, must-revalidate")
+      response.headers.set("Pragma", "no-cache")
+      return response
     }
 
     // Invalidate existing unused OTPs for this email+campaign pair
@@ -50,7 +59,10 @@ export async function POST(request: NextRequest) {
       console.log(
         `[v0] MOCK EMAIL — verification code for ${email}: ${MOCK_CODE}`,
       )
-      return NextResponse.json({ ok: true, mock: true, mockCode: MOCK_CODE })
+      const response = NextResponse.json({ ok: true, mock: true, mockCode: MOCK_CODE })
+      response.headers.set("Cache-Control", "no-cache, no-store, must-revalidate")
+      response.headers.set("Pragma", "no-cache")
+      return response
     }
 
     // -----------------------------------------------------------------------
@@ -58,7 +70,10 @@ export async function POST(request: NextRequest) {
     // -----------------------------------------------------------------------
     if (!RESEND_API_KEY) {
       console.error("[v0] RESEND_API_KEY not configured")
-      return NextResponse.json({ error: "Email service not configured" }, { status: 500 })
+      const response = NextResponse.json({ error: "Email service not configured" }, { status: 500 })
+      response.headers.set("Cache-Control", "no-cache, no-store, must-revalidate")
+      response.headers.set("Pragma", "no-cache")
+      return response
     }
 
     const code = String(randomInt(100000, 999999))
@@ -100,12 +115,21 @@ export async function POST(request: NextRequest) {
     if (!res.ok) {
       const err = await res.json().catch(() => ({}))
       console.error("[v0] Resend API error (send-otp):", err)
-      return NextResponse.json({ error: "Failed to send verification email" }, { status: 500 })
+      const response = NextResponse.json({ error: "Failed to send verification email" }, { status: 500 })
+      response.headers.set("Cache-Control", "no-cache, no-store, must-revalidate")
+      response.headers.set("Pragma", "no-cache")
+      return response
     }
 
-    return NextResponse.json({ ok: true })
+    const response = NextResponse.json({ ok: true })
+    response.headers.set("Cache-Control", "no-cache, no-store, must-revalidate")
+    response.headers.set("Pragma", "no-cache")
+    return response
   } catch (error) {
     console.error("[v0] send-otp error:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    const response = NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    response.headers.set("Cache-Control", "no-cache, no-store, must-revalidate")
+    response.headers.set("Pragma", "no-cache")
+    return response
   }
 }

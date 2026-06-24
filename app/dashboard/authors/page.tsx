@@ -2,6 +2,9 @@ import { PageHeader } from "@/components/admin/page-header"
 import { AuthorsTable } from "@/components/admin/authors-table"
 import { getAuthors, getSubmissionCounts } from "@/lib/queries"
 
+// Prevent prerendering; this page requires database queries
+export const dynamic = "force-dynamic"
+
 export default async function AuthorsPage() {
   const [{ items, nextCursor }, submissionCounts] = await Promise.all([
     getAuthors(),

@@ -1,4 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
+
+// Fluid Compute: quick Supabase token exchange.
+export const maxDuration = 10
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(request: NextRequest) {
@@ -10,9 +13,15 @@ export async function GET(request: NextRequest) {
     const supabase = await createClient()
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
-      return NextResponse.redirect(`${origin}${next}`)
+      const response = NextResponse.redirect(`${origin}${next}`)
+      response.headers.set("Cache-Control", "no-cache, no-store, must-revalidate")
+      response.headers.set("Pragma", "no-cache")
+      return response
     }
   }
 
-  return NextResponse.redirect(`${origin}/auth/error`)
+  const errorResponse = NextResponse.redirect(`${origin}/auth/error`)
+  errorResponse.headers.set("Cache-Control", "no-cache, no-store, must-revalidate")
+  errorResponse.headers.set("Pragma", "no-cache")
+  return errorResponse
 }

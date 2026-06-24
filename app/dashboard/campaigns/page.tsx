@@ -5,6 +5,8 @@ import { CampaignsTable } from "@/components/admin/campaigns-table"
 import { Button } from "@/components/ui/button"
 import { getCampaigns } from "@/lib/queries"
 
+export const dynamic = "force-dynamic"
+
 export default async function CampaignsPage() {
   const campaigns = await getCampaigns()
   return (

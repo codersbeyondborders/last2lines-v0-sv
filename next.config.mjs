@@ -1,5 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Skew Protection: pins static assets and client-side navigation to the
+  // exact deployment that served the initial HTML. When a new deploy goes live
+  // while a user is on the page, any stale client will hard-reload instead of
+  // loading mismatched JS chunks. Requires "Skew Protection" to also be
+  // enabled in Vercel project Settings → Advanced.
+  deploymentId: process.env.VERCEL_DEPLOYMENT_ID,
   typescript: {
     ignoreBuildErrors: true,
   },
