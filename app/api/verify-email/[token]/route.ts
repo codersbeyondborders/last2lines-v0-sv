@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
+
+// Fluid Compute: DB read + write for token verification.
+export const maxDuration = 10
 import { query } from "@/lib/db"
 
 /**

@@ -2,6 +2,8 @@ import { query } from "@/lib/db"
 import { NextResponse } from "next/server"
 
 export const dynamic = "force-dynamic"
+// Fluid Compute: DDL migration may take longer than a typical query.
+export const maxDuration = 60
 
 /** One-time migration: creates the email_otps table. Safe to call multiple times. */
 export async function POST() {

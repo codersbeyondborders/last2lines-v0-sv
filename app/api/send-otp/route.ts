@@ -1,4 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
+
+// Fluid Compute: allow up to 10 s for DB query + optional Resend API call.
+export const maxDuration = 10
 import { createHash, randomInt } from "crypto"
 import { nanoid } from "nanoid"
 import { query } from "@/lib/db"

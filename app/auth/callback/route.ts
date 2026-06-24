@@ -1,4 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
+
+// Fluid Compute: quick Supabase token exchange.
+export const maxDuration = 10
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(request: NextRequest) {

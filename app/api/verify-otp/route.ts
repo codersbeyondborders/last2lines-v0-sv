@@ -1,4 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
+
+// Fluid Compute: short DB read + write operation.
+export const maxDuration = 10
 import { createHash } from "crypto"
 import { query } from "@/lib/db"
 

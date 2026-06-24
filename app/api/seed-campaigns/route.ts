@@ -3,6 +3,8 @@ import { NextResponse } from 'next/server'
 
 // Disable caching for this route
 export const dynamic = 'force-dynamic'
+// Fluid Compute: multiple sequential DB inserts across 4 campaigns.
+export const maxDuration = 60
 
 export async function POST() {
   try {

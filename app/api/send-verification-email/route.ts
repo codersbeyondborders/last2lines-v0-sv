@@ -1,4 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
+
+// Fluid Compute: DB write + Resend API call.
+export const maxDuration = 10
 import { nanoid } from "nanoid"
 import { query } from "@/lib/db"
 

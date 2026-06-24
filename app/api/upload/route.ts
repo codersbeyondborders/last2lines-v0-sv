@@ -1,4 +1,7 @@
 import { put } from '@vercel/blob'
+
+// Fluid Compute: allow up to 30 s for large file uploads to Vercel Blob.
+export const maxDuration = 30
 import { type NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {
