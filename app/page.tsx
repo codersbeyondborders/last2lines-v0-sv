@@ -10,8 +10,10 @@ import { Button } from "@/components/ui/button"
 import { getCampaigns, getHomepageStats } from "@/lib/queries"
 
 // Revalidate every 60 s so campaign lists and stats stay reasonably fresh
-// without hammering the DB on every request.
+// without hammering the DB on every request. Skip prerendering at build time
+// since database may not be available in the build environment.
 export const revalidate = 60
+export const dynamic = "force-dynamic"
 
 // Separated async component so the hero renders immediately via streaming
 // while campaigns load in the background.

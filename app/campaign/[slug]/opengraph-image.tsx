@@ -1,7 +1,8 @@
 import { ImageResponse } from "next/og"
 import { getCampaignBySlug } from "@/lib/queries"
 
-export const runtime = "edge"
+// Use Node.js runtime for OG images because database queries require Node.js modules
+// (AWS SDK dependencies). Edge runtime doesn't support these.
 
 export const size = { width: 1200, height: 630 }
 export const contentType = "image/png"

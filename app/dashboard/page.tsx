@@ -12,6 +12,8 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ContributionStatusBadge } from "@/components/admin/status-badges"
 
+export const dynamic = "force-dynamic"
+
 export default async function DashboardOverviewPage() {
   const summary = await getDashboardSummary()
   const pending = await getContributionsByStatus("pending")

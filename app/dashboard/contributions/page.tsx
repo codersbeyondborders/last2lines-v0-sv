@@ -9,6 +9,8 @@ import type { ContributionStatus } from "@/lib/mock-data"
 
 const VALID_STATUSES = new Set<string>(["pending", "approved", "rejected"])
 
+export const dynamic = "force-dynamic"
+
 export default async function ContributionsPage({
   searchParams,
 }: {

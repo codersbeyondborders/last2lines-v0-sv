@@ -6,11 +6,6 @@ const nextConfig = {
   // loading mismatched JS chunks. Requires "Skew Protection" to also be
   // enabled in Vercel project Settings → Advanced.
   deploymentId: process.env.VERCEL_DEPLOYMENT_ID,
-
-  // Required to activate instrumentation.ts for @vercel/otel tracing.
-  experimental: {
-    instrumentationHook: true,
-  },
   typescript: {
     ignoreBuildErrors: true,
   },
