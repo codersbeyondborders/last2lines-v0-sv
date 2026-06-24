@@ -187,15 +187,21 @@ export async function POST() {
       console.log(`✓ Created campaign: ${title}`)
     }
 
-    return NextResponse.json(
+    const response = NextResponse.json(
       { success: true, message: 'Campaign seeding completed successfully!' },
       { status: 200 },
     )
+    response.headers.set("Cache-Control", "no-cache, no-store, must-revalidate")
+    response.headers.set("Pragma", "no-cache")
+    return response
   } catch (error) {
     console.error('Error seeding campaigns:', error)
-    return NextResponse.json(
+    const errorResponse = NextResponse.json(
       { success: false, error: String(error) },
       { status: 500 },
     )
+    errorResponse.headers.set("Cache-Control", "no-cache, no-store, must-revalidate")
+    errorResponse.headers.set("Pragma", "no-cache")
+    return errorResponse
   }
 }

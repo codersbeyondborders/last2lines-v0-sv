@@ -10,7 +10,10 @@ export async function POST(request: NextRequest) {
     const { email, campaignId, code } = await request.json()
 
     if (!email || !campaignId || !code) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
+      const response = NextResponse.json({ error: "Missing required fields" }, { status: 400 })
+      response.headers.set("Cache-Control", "no-cache, no-store, must-revalidate")
+      response.headers.set("Pragma", "no-cache")
+      return response
     }
 
     const codeHash = createHash("sha256").update(String(code).trim()).digest("hex")
@@ -33,23 +36,38 @@ export async function POST(request: NextRequest) {
     const otp = rows[0]
 
     if (!otp) {
-      return NextResponse.json({ error: "Invalid verification code." }, { status: 400 })
+      const response = NextResponse.json({ error: "Invalid verification code." }, { status: 400 })
+      response.headers.set("Cache-Control", "no-cache, no-store, must-revalidate")
+      response.headers.set("Pragma", "no-cache")
+      return response
     }
 
     if (otp.used) {
-      return NextResponse.json({ error: "This code has already been used." }, { status: 400 })
+      const response = NextResponse.json({ error: "This code has already been used." }, { status: 400 })
+      response.headers.set("Cache-Control", "no-cache, no-store, must-revalidate")
+      response.headers.set("Pragma", "no-cache")
+      return response
     }
 
     if (new Date(otp.expires_at) < new Date()) {
-      return NextResponse.json({ error: "This code has expired. Please request a new one." }, { status: 400 })
+      const response = NextResponse.json({ error: "This code has expired. Please request a new one." }, { status: 400 })
+      response.headers.set("Cache-Control", "no-cache, no-store, must-revalidate")
+      response.headers.set("Pragma", "no-cache")
+      return response
     }
 
     // Mark OTP as used
     await query(`UPDATE email_otps SET used = true WHERE id = $1`, [otp.id])
 
-    return NextResponse.json({ ok: true })
+    const response = NextResponse.json({ ok: true })
+    response.headers.set("Cache-Control", "no-cache, no-store, must-revalidate")
+    response.headers.set("Pragma", "no-cache")
+    return response
   } catch (error) {
     console.error("[v0] verify-otp error:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    const response = NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    response.headers.set("Cache-Control", "no-cache, no-store, must-revalidate")
+    response.headers.set("Pragma", "no-cache")
+    return response
   }
 }
