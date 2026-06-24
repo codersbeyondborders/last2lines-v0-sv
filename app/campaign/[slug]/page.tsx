@@ -15,9 +15,9 @@ import {
   getSeedCouplets,
 } from "@/lib/queries"
 
-// Campaign content is live and DB-backed, so render on demand rather than
-// prerendering (the database is not reachable at build time).
-export const dynamic = "force-dynamic"
+// Revalidate campaign pages every 30 s — contributions can arrive frequently
+// but we don't need sub-second freshness on the public view.
+export const revalidate = 30
 
 export async function generateMetadata({
   params,

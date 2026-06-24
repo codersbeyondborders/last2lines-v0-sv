@@ -1,5 +1,8 @@
 import type { Metadata } from "next"
 import Link from "next/link"
+
+// Static content — revalidate once per day.
+export const revalidate = 86400
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 
