@@ -112,10 +112,18 @@ export function CampaignForm({ campaign, seedCouplets }: { campaign?: Campaign; 
   const [error, setError] = useState<string | null>(null)
 
   const titleError = touched && !title.trim() ? "Title is required." : null
+  const taglineError = touched && !tagline.trim() ? "Tagline is required." : null
+  const descriptionError = touched && !description.trim() ? "Description (About this campaign) is required." : null
   const startDateError = touched && !startDate ? "Start date is required." : null
   const closeDateError = touched && !closeDate ? "Close date is required." : null
   const dateRangeError = touched && startDate && closeDate && new Date(startDate) >= new Date(closeDate) ? "Close date must be after start date." : null
-  const isValid = title.trim().length > 0 && startDate && closeDate && new Date(startDate) < new Date(closeDate)
+  const isValid =
+    title.trim().length > 0 &&
+    tagline.trim().length > 0 &&
+    description.trim().length > 0 &&
+    startDate &&
+    closeDate &&
+    new Date(startDate) < new Date(closeDate)
 
   function addSeed() {
     setSeeds((prev) => [
@@ -221,24 +229,48 @@ export function CampaignForm({ campaign, seedCouplets }: { campaign?: Campaign; 
         </div>
 
         <div className="flex flex-col gap-2">
-          <Label htmlFor="tagline">Tagline</Label>
+          <Label htmlFor="tagline">
+            Tagline <span className="text-destructive" aria-hidden="true">*</span>
+          </Label>
           <Input
             id="tagline"
             value={tagline}
+            aria-required="true"
+            aria-invalid={Boolean(taglineError)}
+            aria-describedby={taglineError ? "tagline-error" : undefined}
             onChange={(e) => setTagline(e.target.value)}
+            onBlur={() => setTouched(true)}
             placeholder="A living poem written by the world, for the world."
+            className={cn(taglineError && "border-destructive")}
           />
+          {taglineError ? (
+            <p id="tagline-error" role="alert" className="text-xs font-medium text-destructive">
+              {taglineError}
+            </p>
+          ) : null}
         </div>
 
         <div className="flex flex-col gap-2">
-          <Label htmlFor="description">Description</Label>
+          <Label htmlFor="description">
+            About this campaign <span className="text-destructive" aria-hidden="true">*</span>
+          </Label>
           <Textarea
             id="description"
             value={description}
+            aria-required="true"
+            aria-invalid={Boolean(descriptionError)}
+            aria-describedby={descriptionError ? "description-error" : undefined}
             onChange={(e) => setDescription(e.target.value)}
+            onBlur={() => setTouched(true)}
             rows={4}
             placeholder="Describe the cause and what contributors are writing toward."
+            className={cn(descriptionError && "border-destructive")}
           />
+          {descriptionError ? (
+            <p id="description-error" role="alert" className="text-xs font-medium text-destructive">
+              {descriptionError}
+            </p>
+          ) : null}
         </div>
       </FormSection>
 
