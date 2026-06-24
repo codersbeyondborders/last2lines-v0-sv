@@ -19,6 +19,7 @@ export interface CampaignInput {
   donationLink?: string | null
   requireEmailVerification: boolean
   autoEmailOnPublish: boolean
+  featured?: boolean
   startDate: string
   closeDate: string
   seedCouplets?: SeedCoupletInput[]
