@@ -1,266 +1,210 @@
-<svg viewBox="0 0 1400 1000" xmlns="http://www.w3.org/2000/svg">
-  <!-- Define styles -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 900">
   <defs>
     <style>
-      .box { fill: #f5f5f5; stroke: #1a1a1a; stroke-width: 2; }
-      .box-primary { fill: #1a8917; stroke: #0d5a0d; stroke-width: 2; }
-      .box-secondary { fill: #0ea5e9; stroke: #0369a1; stroke-width: 2; }
-      .box-tertiary { fill: #8b5cf6; stroke: #6d28d9; stroke-width: 2; }
-      .box-warning { fill: #f59e0b; stroke: #d97706; stroke-width: 2; }
-      .box-external { fill: #ec4899; stroke: #be123c; stroke-width: 2; }
-      .text-primary { font-size: 14px; font-weight: bold; fill: #1a1a1a; font-family: Arial, sans-serif; }
-      .text-white { font-size: 14px; font-weight: bold; fill: white; font-family: Arial, sans-serif; }
-      .text-small { font-size: 12px; fill: #1a1a1a; font-family: Arial, sans-serif; }
-      .text-small-white { font-size: 12px; fill: white; font-family: Arial, sans-serif; }
-      .label { font-size: 11px; fill: #666; font-family: Arial, sans-serif; font-style: italic; }
-      .title { font-size: 24px; font-weight: bold; fill: #1a1a1a; font-family: Arial, sans-serif; }
-      .section-title { font-size: 16px; font-weight: bold; fill: #1a1a1a; font-family: Arial, sans-serif; }
-      .arrow { stroke: #1a1a1a; stroke-width: 2; fill: none; marker-end: url(#arrowhead); }
-      .arrow-edge { stroke: #0ea5e9; stroke-width: 2; fill: none; marker-end: url(#arrowhead-edge); stroke-dasharray: 5,5; }
-      .arrow-cache { stroke: #8b5cf6; stroke-width: 2; fill: none; marker-end: url(#arrowhead-cache); stroke-dasharray: 5,5; }
+      .layer-label { font-size: 14px; font-weight: bold; fill: #1a1a1a; }
+      .box { stroke-width: 2; }
+      .client-box { fill: #e8f5e9; stroke: #2e7d32; }
+      .vercel-box { fill: #e3f2fd; stroke: #1565c0; }
+      .cache-box { fill: #f3e5f5; stroke: #6a1b9a; }
+      .function-box { fill: #fff3e0; stroke: #e65100; }
+      .db-box { fill: #fce4ec; stroke: #c2185b; }
+      .external-box { fill: #ede7f6; stroke: #512da8; }
+      .text-label { font-size: 12px; fill: #1a1a1a; text-anchor: middle; }
+      .connector { stroke: #666; stroke-width: 2; fill: none; marker-end: url(#arrowhead); }
+      .connector-label { font-size: 10px; fill: #666; }
+      .section-title { font-size: 16px; font-weight: bold; fill: #1a1a1a; }
     </style>
     <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
-      <polygon points="0 0, 10 3, 0 6" fill="#1a1a1a" />
-    </marker>
-    <marker id="arrowhead-edge" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
-      <polygon points="0 0, 10 3, 0 6" fill="#0ea5e9" />
-    </marker>
-    <marker id="arrowhead-cache" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
-      <polygon points="0 0, 10 3, 0 6" fill="#8b5cf6" />
+      <polygon points="0 0, 10 3, 0 6" fill="#666" />
     </marker>
   </defs>
 
-  <!-- Title -->
-  <text x="700" y="40" text-anchor="middle" class="title">Last2Lines Architecture - Production Stack</text>
+  <!-- Background sections -->
+  <rect x="10" y="10" width="380" height="880" fill="#f5f5f5" stroke="#ccc" stroke-width="1" rx="5" opacity="0.3"/>
+  <rect x="400" y="10" width="500" height="880" fill="#f5f5f5" stroke="#ccc" stroke-width="1" rx="5" opacity="0.3"/>
+  <rect x="910" y="10" width="480" height="880" fill="#f5f5f5" stroke="#ccc" stroke-width="1" rx="5" opacity="0.3"/>
 
-  <!-- ============ CLIENT LAYER ============ -->
-  <text x="20" y="90" class="section-title">🌐 Client Layer</text>
+  <!-- Section titles -->
+  <text x="200" y="35" class="section-title">CLIENT & CDN</text>
+  <text x="650" y="35" class="section-title">VERCEL EDGE & SERVERLESS</text>
+  <text x="1150" y="35" class="section-title">BACKEND & SERVICES</text>
 
-  <!-- Browser/Client -->
-  <rect x="50" y="110" width="140" height="60" class="box"/>
-  <text x="120" y="135" text-anchor="middle" class="text-primary">Browser</text>
-  <text x="120" y="155" text-anchor="middle" class="text-small">(User Client)</text>
+  <!-- ==================== LAYER 1: CLIENT ==================== -->
+  <rect x="30" y="60" width="140" height="60" class="box client-box" rx="5"/>
+  <text x="100" y="85" class="text-label">Browser</text>
+  <text x="100" y="103" class="text-label" font-size="10">Request</text>
 
-  <!-- ============ VERCEL EDGE/CDN ============ -->
-  <text x="320" y="90" class="section-title">⚡ Vercel Edge/CDN</text>
-
-  <!-- Middleware (Edge) -->
-  <rect x="280" y="110" width="160" height="60" class="box-secondary"/>
-  <text x="360" y="130" text-anchor="middle" class="text-white">Middleware</text>
-  <text x="360" y="150" text-anchor="middle" class="text-small-white">(Edge Runtime)</text>
-  <text x="360" y="165" text-anchor="middle" class="label">Session refresh</text>
+  <!-- ==================== LAYER 2: VERCEL EDGE ==================== -->
+  <!-- Middleware -->
+  <rect x="420" y="60" width="120" height="60" class="box vercel-box" rx="5"/>
+  <text x="480" y="85" class="text-label">Middleware</text>
+  <text x="480" y="103" class="text-label" font-size="10">(Edge Runtime)</text>
 
   <!-- ISR Cache -->
-  <rect x="520" y="110" width="140" height="60" class="box-tertiary"/>
-  <text x="590" y="135" text-anchor="middle" class="text-white">ISR Cache</text>
-  <text x="590" y="155" text-anchor="middle" class="text-small-white">30-86400s</text>
+  <rect x="600" y="60" width="120" height="60" class="box cache-box" rx="5"/>
+  <text x="660" y="85" class="text-label">ISR Cache</text>
+  <text x="660" y="103" class="text-label" font-size="10">Vercel Edge</text>
 
-  <!-- OG Images -->
-  <rect x="740" y="110" width="140" height="60" class="box-tertiary"/>
-  <text x="810" y="135" text-anchor="middle" class="text-white">OG Images</text>
-  <text x="810" y="155" text-anchor="middle" class="text-small-white">(on-demand)</text>
+  <!-- OG Image Gen -->
+  <rect x="780" y="60" width="120" height="60" class="box vercel-box" rx="5"/>
+  <text x="840" y="85" class="text-label">OG Images</text>
+  <text x="840" y="103" class="text-label" font-size="10">next/og</text>
 
-  <!-- ============ API ROUTES (Serverless Functions) ============ -->
-  <text x="20" y="240" class="section-title">🔧 API Routes (Serverless Functions)</text>
+  <!-- Connectors from browser to edge -->
+  <path d="M 170 90 L 420 90" class="connector"/>
+  <text x="295" y="85" class="connector-label">Route matching</text>
 
-  <!-- Auth Routes -->
-  <rect x="50" y="260" width="130" height="80" class="box-warning"/>
-  <text x="115" y="280" text-anchor="middle" class="text-white">Auth Routes</text>
-  <text x="115" y="300" text-anchor="middle" class="text-small-white">/auth/callback</text>
-  <text x="115" y="318" text-anchor="middle" class="label">maxDuration: 10s</text>
-  <text x="115" y="332" text-anchor="middle" class="label">no-cache headers</text>
+  <!-- ==================== LAYER 3: NEXTJS PAGES ==================== -->
+  <!-- Public Pages -->
+  <rect x="30" y="170" width="360" height="100" class="box vercel-box" rx="5"/>
+  <text x="210" y="195" class="text-label" font-size="12">Public Pages (ISR + Streaming)</text>
+  <rect x="45" y="205" width="80" height="35" class="box cache-box" rx="3" stroke-width="1"/>
+  <text x="85" y="228" class="text-label" font-size="10">/ (60s)</text>
 
-  <!-- OTP Routes -->
-  <rect x="230" y="260" width="130" height="80" class="box-warning"/>
-  <text x="295" y="280" text-anchor="middle" class="text-white">OTP Routes</text>
-  <text x="295" y="300" text-anchor="middle" class="text-small-white">/send-otp</text>
-  <text x="295" y="315" text-anchor="middle" class="text-small-white">/verify-otp</text>
-  <text x="295" y="332" text-anchor="middle" class="label">maxDuration: 10s</text>
+  <rect x="135" y="205" width="80" height="35" class="box cache-box" rx="3" stroke-width="1"/>
+  <text x="175" y="228" class="text-label" font-size="10">/campaign (30s)</text>
 
-  <!-- Email Routes -->
-  <rect x="410" y="260" width="140" height="80" class="box-warning"/>
-  <text x="480" y="280" text-anchor="middle" class="text-white">Email Routes</text>
-  <text x="480" y="300" text-anchor="middle" class="text-small-white">/send-verification</text>
-  <text x="480" y="318" text-anchor="middle" class="label">maxDuration: 10s</text>
-  <text x="480" y="332" text-anchor="middle" class="label">Resend API call</text>
+  <rect x="225" y="205" width="80" height="35" class="box cache-box" rx="3" stroke-width="1"/>
+  <text x="265" y="228" class="text-label" font-size="10">/about (24h)</text>
 
-  <!-- Upload Routes -->
-  <rect x="600" y="260" width="130" height="80" class="box-warning"/>
-  <text x="665" y="280" text-anchor="middle" class="text-white">Upload Routes</text>
-  <text x="665" y="300" text-anchor="middle" class="text-small-white">/upload</text>
-  <text x="665" y="318" text-anchor="middle" class="label">maxDuration: 30s</text>
-  <text x="665" y="332" text-anchor="middle" class="label">Blob storage</text>
-
-  <!-- Admin Routes -->
-  <rect x="780" y="260" width="140" height="80" class="box-warning"/>
-  <text x="850" y="280" text-anchor="middle" class="text-white">Admin Routes</text>
-  <text x="850" y="300" text-anchor="middle" class="text-small-white">/migrate-otps</text>
-  <text x="850" y="315" text-anchor="middle" class="text-small-white">/seed-campaigns</text>
-  <text x="850" y="332" text-anchor="middle" class="label">maxDuration: 60s</text>
-
-  <!-- ============ NEXT.JS PAGES (RSCs) ============ -->
-  <text x="20" y="420" class="section-title">📄 Next.js Pages (React Server Components)</text>
-
-  <!-- Homepage -->
-  <rect x="50" y="440" width="130" height="70" class="box-primary"/>
-  <text x="115" y="460" text-anchor="middle" class="text-white">Homepage</text>
-  <text x="115" y="480" text-anchor="middle" class="text-small-white">Streaming SSR</text>
-  <text x="115" y="495" text-anchor="middle" class="label">revalidate: 60s</text>
-
-  <!-- Campaign Pages -->
-  <rect x="230" y="440" width="130" height="70" class="box-primary"/>
-  <text x="295" y="460" text-anchor="middle" class="text-white">Campaign Pages</text>
-  <text x="295" y="480" text-anchor="middle" class="text-small-white">/campaign/[slug]</text>
-  <text x="295" y="495" text-anchor="middle" class="label">revalidate: 30s</text>
-
-  <!-- Static Pages -->
-  <rect x="410" y="440" width="130" height="70" class="box-primary"/>
-  <text x="475" y="460" text-anchor="middle" class="text-white">Static Pages</text>
-  <text x="475" y="480" text-anchor="middle" class="text-small-white">/about /contact</text>
-  <text x="475" y="495" text-anchor="middle" class="label">revalidate: 86400s</text>
+  <rect x="315" y="205" width="80" height="35" class="box cache-box" rx="3" stroke-width="1"/>
+  <text x="355" y="228" class="text-label" font-size="10">loading.tsx</text>
 
   <!-- Protected Pages -->
-  <rect x="590" y="440" width="130" height="70" class="box-primary"/>
-  <text x="655" y="460" text-anchor="middle" class="text-white">Protected Pages</text>
-  <text x="655" y="480" text-anchor="middle" class="text-small-white">/dashboard</text>
-  <text x="655" y="495" text-anchor="middle" class="label">force-dynamic</text>
+  <rect x="30" y="290" width="360" height="80" class="box vercel-box" rx="5"/>
+  <text x="210" y="315" class="text-label" font-size="12">Protected Pages (Auth Required)</text>
+  <rect x="45" y="335" width="160" height="25" class="box vercel-box" rx="3" stroke-width="1"/>
+  <text x="125" y="352" class="text-label" font-size="10">/dashboard</text>
 
-  <!-- ============ OBSERVABILITY ============ -->
-  <text x="780" y="420" class="section-title">📊 Observability</text>
+  <rect x="225" y="335" width="160" height="25" class="box vercel-box" rx="3" stroke-width="1"/>
+  <text x="305" y="352" class="text-label" font-size="10">/admin</text>
 
-  <!-- OTEL -->
-  <rect x="780" y="440" width="140" height="70" class="box-secondary"/>
-  <text x="850" y="460" text-anchor="middle" class="text-white">@vercel/otel</text>
-  <text x="850" y="480" text-anchor="middle" class="text-small-white">OpenTelemetry</text>
-  <text x="850" y="495" text-anchor="middle" class="label">Tracing all requests</text>
+  <!-- Connectors -->
+  <path d="M 100 120 L 100 170" class="connector"/>
+  <text x="65" y="150" class="connector-label">Public</text>
 
-  <!-- ============ DATABASE LAYER ============ -->
-  <text x="20" y="610" class="section-title">🗄️ Database Layer</text>
+  <path d="M 660 120 L 660 170" class="connector"/>
+  <text x="625" y="150" class="connector-label">Cached</text>
 
-  <!-- PostgreSQL (AWS RDS) -->
-  <rect x="50" y="630" width="180" height="100" class="box-primary"/>
-  <text x="140" y="655" text-anchor="middle" class="text-white">PostgreSQL</text>
-  <text x="140" y="675" text-anchor="middle" class="text-small-white">(AWS RDS)</text>
-  <text x="140" y="695" text-anchor="middle" class="label">attachDatabasePool</text>
-  <text x="140" y="710" text-anchor="middle" class="label">withConnection txns</text>
-  <text x="140" y="725" text-anchor="middle" class="label">SSL: rejectUnauthorized</text>
+  <path d="M 480 120 L 120 290" class="connector"/>
+  <text x="280" y="200" class="connector-label">Session check</text>
 
-  <!-- Connection Library -->
-  <rect x="300" y="630" width="160" height="100" class="box"/>
-  <text x="380" y="655" text-anchor="middle" class="text-primary">DB Client</text>
-  <text x="380" y="675" text-anchor="middle" class="text-small">lib/db.ts</text>
-  <text x="380" y="695" text-anchor="middle" class="label">pg + IAM auth</text>
-  <text x="380" y="710" text-anchor="middle" class="label">connection pooling</text>
-  <text x="380" y="725" text-anchor="middle" class="label">transactions support</text>
+  <!-- ==================== LAYER 4: API ROUTES ==================== -->
+  <!-- API Routes -->
+  <rect x="420" y="170" width="470" height="200" class="box function-box" rx="5"/>
+  <text x="655" y="195" class="text-label" font-size="12">API Routes (Fluid Compute)</text>
 
-  <!-- Tables -->
-  <rect x="540" y="630" width="140" height="100" class="box"/>
-  <text x="610" y="655" text-anchor="middle" class="text-primary">Tables</text>
-  <text x="610" y="675" text-anchor="middle" class="text-small">campaigns</text>
-  <text x="610" y="690" text-anchor="middle" class="text-small">contributions</text>
-  <text x="610" y="705" text-anchor="middle" class="text-small">email_otps</text>
-  <text x="610" y="720" text-anchor="middle" class="text-small">email_verifications</text>
+  <!-- Auth & Email -->
+  <rect x="435" y="210" width="100" height="40" class="box function-box" rx="3" stroke-width="1"/>
+  <text x="485" y="233" class="text-label" font-size="10">send-otp (10s)</text>
 
-  <!-- ============ EXTERNAL SERVICES ============ -->
-  <text x="780" y="610" class="section-title">🌍 External Services</text>
+  <rect x="545" y="210" width="100" height="40" class="box function-box" rx="3" stroke-width="1"/>
+  <text x="595" y="233" class="text-label" font-size="10">verify-otp (10s)</text>
 
+  <rect x="655" y="210" width="110" height="40" class="box function-box" rx="3" stroke-width="1"/>
+  <text x="710" y="233" class="text-label" font-size="10">send-email (10s)</text>
+
+  <rect x="775" y="210" width="100" height="40" class="box function-box" rx="3" stroke-width="1"/>
+  <text x="825" y="233" class="text-label" font-size="10">callback (10s)</text>
+
+  <!-- Upload & Admin -->
+  <rect x="435" y="265" width="100" height="40" class="box function-box" rx="3" stroke-width="1"/>
+  <text x="485" y="288" class="text-label" font-size="10">upload (30s)</text>
+
+  <rect x="545" y="265" width="100" height="40" class="box function-box" rx="3" stroke-width="1"/>
+  <text x="595" y="288" class="text-label" font-size="10">migrate (60s)</text>
+
+  <rect x="655" y="265" width="110" height="40" class="box function-box" rx="3" stroke-width="1"/>
+  <text x="710" y="288" class="text-label" font-size="10">seed-data (60s)</text>
+
+  <rect x="775" y="265" width="100" height="40" class="box function-box" rx="3" stroke-width="1"/>
+  <text x="825" y="288" class="text-label" font-size="10">verify-email</text>
+
+  <!-- Cache Headers note -->
+  <rect x="435" y="315" width="440" height="40" fill="none" stroke="#e65100" stroke-width="1" stroke-dasharray="4,4" rx="3"/>
+  <text x="655" y="335" class="text-label" font-size="10">All responses: Cache-Control: no-cache, no-store, must-revalidate</text>
+
+  <!-- Connectors -->
+  <path d="M 210 370 L 500 170" class="connector"/>
+  <text x="340" y="260" class="connector-label">Middleware</text>
+
+  <!-- ==================== LAYER 5: DATABASE ==================== -->
+  <!-- PostgreSQL with pooling -->
+  <rect x="930" y="60" width="200" height="100" class="box db-box" rx="5"/>
+  <text x="1030" y="85" class="text-label">PostgreSQL</text>
+  <text x="1030" y="103" class="text-label" font-size="10">AWS Aurora</text>
+  <text x="1030" y="121" class="text-label" font-size="10">+ Connection Pool</text>
+
+  <!-- Connector from API to DB -->
+  <path d="M 890 250 L 930 120" class="connector"/>
+  <text x="895" y="180" class="connector-label">Queries with</text>
+  <text x="895" y="195" class="connector-label">withConnection</text>
+
+  <!-- ==================== LAYER 6: EXTERNAL SERVICES ==================== -->
   <!-- Resend -->
-  <rect x="780" y="630" width="130" height="70" class="box-external"/>
-  <text x="845" y="655" text-anchor="middle" class="text-white">Resend</text>
-  <text x="845" y="675" text-anchor="middle" class="text-small-white">Email Service</text>
-  <text x="845" y="690" text-anchor="middle" class="label">OTP + Verification</text>
+  <rect x="930" y="200" width="200" height="80" class="box external-box" rx="5"/>
+  <text x="1030" y="230" class="text-label" font-size="12">Resend</text>
+  <text x="1030" y="250" class="text-label" font-size="10">Email Service</text>
+  <path d="M 890 230 L 930 230" class="connector"/>
 
   <!-- Vercel Blob -->
-  <rect x="970" y="630" width="130" height="70" class="box-external"/>
-  <text x="1035" y="655" text-anchor="middle" class="text-white">Vercel Blob</text>
-  <text x="1035" y="675" text-anchor="middle" class="text-small-white">File Storage</text>
-  <text x="1035" y="690" text-anchor="middle" class="label">Campaign images</text>
+  <rect x="930" y="310" width="200" height="80" class="box external-box" rx="5"/>
+  <text x="1030" y="340" class="text-label" font-size="12">Vercel Blob</text>
+  <text x="1030" y="360" class="text-label" font-size="10">File Storage</text>
+  <path d="M 890 290 L 930 350" class="connector"/>
 
-  <!-- ============ SECURITY & PERFORMANCE ============ -->
-  <text x="20" y="810" class="section-title">🔒 Security & Performance Features</text>
+  <!-- ==================== LAYER 7: OBSERVABILITY ==================== -->
+  <rect x="930" y="420" width="440" height="120" class="box vercel-box" rx="5"/>
+  <text x="1150" y="445" class="text-label" font-size="12">Observability &amp; Monitoring</text>
 
-  <!-- Skew Protection -->
-  <rect x="50" y="830" width="140" height="70" class="box-secondary"/>
-  <text x="120" y="850" text-anchor="middle" class="text-white">Skew Protection</text>
-  <text x="120" y="870" text-anchor="middle" class="text-small-white">deploymentId</text>
-  <text x="120" y="885" text-anchor="middle" class="label">Asset pinning</text>
+  <rect x="945" y="460" width="130" height="30" class="box vercel-box" rx="3" stroke-width="1"/>
+  <text x="1010" y="480" class="text-label" font-size="10">@vercel/otel</text>
 
-  <!-- Speed Insights -->
-  <rect x="250" y="830" width="140" height="70" class="box-secondary"/>
-  <text x="320" y="850" text-anchor="middle" class="text-white">Speed Insights</text>
-  <text x="320" y="870" text-anchor="middle" class="text-small-white">Web Vitals</text>
-  <text x="320" y="885" text-anchor="middle" class="label">LCP, INP, CLS</text>
+  <rect x="1085" y="460" width="130" height="30" class="box vercel-box" rx="3" stroke-width="1"/>
+  <text x="1150" y="480" class="text-label" font-size="10">Speed Insights</text>
 
-  <!-- Web Analytics -->
-  <rect x="450" y="830" width="140" height="70" class="box-secondary"/>
-  <text x="520" y="850" text-anchor="middle" class="text-white">Web Analytics</text>
-  <text x="520" y="870" text-anchor="middle" class="text-small-white">User Tracking</text>
-  <text x="520" y="885" text-anchor="middle" class="label">Conversion funnels</text>
+  <rect x="1225" y="460" width="130" height="30" class="box vercel-box" rx="3" stroke-width="1"/>
+  <text x="1290" y="480" class="text-label" font-size="10">Web Analytics</text>
 
-  <!-- Image Optimization -->
-  <rect x="650" y="830" width="140" height="70" class="box-secondary"/>
-  <text x="720" y="850" text-anchor="middle" class="text-white">Image Optimization</text>
-  <text x="720" y="870" text-anchor="middle" class="text-small-white">AVIF/WebP</text>
-  <text x="720" y="885" text-anchor="middle" class="label">Adaptive serving</text>
+  <text x="1150" y="510" class="text-label" font-size="10">Tracing • Error Attribution • Core Web Vitals</text>
 
-  <!-- Middleware Security -->
-  <rect x="850" y="830" width="140" height="70" class="box-secondary"/>
-  <text x="920" y="850" text-anchor="middle" class="text-white">Auth Middleware</text>
-  <text x="920" y="870" text-anchor="middle" class="text-small-white">(Edge Runtime)</text>
-  <text x="920" y="885" text-anchor="middle" class="label">Session refresh</text>
+  <!-- Connector from API to observability -->
+  <path d="M 890 200 L 930 480" class="connector"/>
+  <text x="895" y="340" class="connector-label">Instrumentation</text>
 
-  <!-- ============ ARROWS / CONNECTIONS ============ -->
+  <!-- ==================== LAYER 8: PERFORMANCE FEATURES ==================== -->
+  <rect x="930" y="570" width="440" height="110" class="box cache-box" rx="5"/>
+  <text x="1150" y="595" class="text-label" font-size="12">Performance &amp; Security</text>
 
-  <!-- Client to Middleware -->
-  <line x1="190" y1="140" x2="280" y2="140" class="arrow"/>
+  <rect x="945" y="610" width="100" height="30" class="box cache-box" rx="3" stroke-width="1"/>
+  <text x="995" y="630" class="text-label" font-size="10">Skew Protect</text>
 
-  <!-- Middleware to ISR Cache -->
-  <line x1="440" y1="140" x2="520" y2="140" class="arrow"/>
+  <rect x="1055" y="610" width="100" height="30" class="box cache-box" rx="3" stroke-width="1"/>
+  <text x="1105" y="630" class="text-label" font-size="10">Image Opt</text>
 
-  <!-- Middleware to API Routes -->
-  <line x1="360" y1="170" x2="115" y2="260" class="arrow"/>
-  <line x1="360" y1="170" x2="295" y2="260" class="arrow"/>
-  <line x1="360" y1="170" x2="480" y2="260" class="arrow"/>
+  <rect x="1165" y="610" width="100" height="30" class="box cache-box" rx="3" stroke-width="1"/>
+  <text x="1215" y="630" class="text-label" font-size="10">SSL/RLS</text>
 
-  <!-- Client to Pages -->
-  <line x1="120" y1="170" x2="115" y2="440" class="arrow"/>
+  <rect x="1275" y="610" width="100" height="30" class="box cache-box" rx="3" stroke-width="1"/>
+  <text x="1325" y="630" class="text-label" font-size="10">Edge Middleware</text>
 
-  <!-- API Routes to Database -->
-  <line x1="115" y1="340" x2="140" y2="630" class="arrow"/>
-  <line x1="295" y1="340" x2="140" y2="630" class="arrow"/>
-  <line x1="480" y1="340" x2="140" y2="630" class="arrow"/>
+  <!-- ==================== LEGEND ==================== -->
+  <rect x="30" y="700" width="1340" height="180" class="box" fill="#fafafa" stroke="#ccc" stroke-width="1" rx="5"/>
 
-  <!-- API Routes to External Services -->
-  <line x1="480" y1="340" x2="845" y2="630" class="arrow"/>
-  <line x1="665" y1="340" x2="1035" y2="630" class="arrow"/>
+  <text x="50" y="730" class="section-title">Architecture Features by Layer</text>
 
-  <!-- Pages to Database -->
-  <line x1="115" y1="510" x2="140" y2="630" class="arrow"/>
-  <line x1="295" y1="510" x2="140" y2="630" class="arrow"/>
+  <text x="50" y="765" class="text-label" font-size="11" text-anchor="start" font-weight="bold">Client Layer:</text>
+  <text x="50" y="785" class="text-label" font-size="10" text-anchor="start">Browser sends requests → Vercel Edge processes routing</text>
 
-  <!-- Pages to Observability -->
-  <line x1="720" y1="475" x2="780" y2="475" class="arrow"/>
+  <text x="50" y="810" class="text-label" font-size="11" text-anchor="start" font-weight="bold">Edge Layer:</text>
+  <text x="50" y="830" class="text-label" font-size="10" text-anchor="start">Middleware (narrowed matcher) validates sessions on protected routes only • ISR serves cached pages • OG images generated on-demand</text>
 
-  <!-- OTEL to external -->
-  <line x1="920" y1="510" x2="920" y2="610" class="arrow-cache"/>
+  <text x="700" y="765" class="text-label" font-size="11" text-anchor="start" font-weight="bold">Serverless Layer:</text>
+  <text x="700" y="785" class="text-label" font-size="10" text-anchor="start">All API routes have maxDuration timeouts • Responses include Cache-Control headers to prevent stale state</text>
 
-  <!-- Database Client connections -->
-  <line x1="230" y1="680" x2="300" y2="680" class="arrow"/>
+  <text x="700" y="810" class="text-label" font-size="11" text-anchor="start" font-weight="bold">Backend Layer:</text>
+  <text x="700" y="830" class="text-label" font-size="10" text-anchor="start">PostgreSQL with connection pooling • withConnection helper for atomic transactions • SSL encryption • @vercel/otel tracing across all services</text>
 
-  <!-- Legend -->
-  <text x="20" y="955" class="label">Legend:</text>
-  <rect x="130" y="935" width="20" height="20" class="box-primary"/>
-  <text x="160" y="950" class="label">Backend Logic</text>
-
-  <rect x="330" y="935" width="20" height="20" class="box-secondary"/>
-  <text x="360" y="950" class="label">Edge/Vercel Services</text>
-
-  <rect x="580" y="935" width="20" height="20" class="box-tertiary"/>
-  <text x="610" y="950" class="label">Caching Layer</text>
-
-  <rect x="820" y="935" width="20" height="20" class="box-warning"/>
-  <text x="850" y="950" class="label">Serverless Functions</text>
-
-  <rect x="1070" y="935" width="20" height="20" class="box-external"/>
-  <text x="1100" y="950" class="label">External APIs</text>
+  <!-- Version info -->
+  <text x="700" y="855" class="text-label" font-size="9" text-anchor="start" fill="#999">Last2Lines v0 • Vercel Optimized • AWS Aurora PostgreSQL • Production-Ready</text>
 </svg>
