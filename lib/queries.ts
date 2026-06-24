@@ -623,3 +623,67 @@ export async function getContributionsByCountry(
       percentage: total > 0 ? (parseInt(row.count, 10) / total) * 100 : 0,
     }))
 }
+
+export type CountryDataPoint = {
+  country: string
+  count: number
+  percentage: number
+}
+
+/**
+ * Returns aggregate country data plus a per-campaign breakdown in one batch.
+ * The record key is the campaign id; "all" holds the aggregate totals.
+ */
+export async function getContributionsByCountryAllCampaigns(
+  campaignIds: string[],
+): Promise<Record<string, CountryDataPoint[]>> {
+  "use server"
+
+  // Fetch aggregate (all campaigns)
+  const aggResult = await query<{ country: string | null; count: string }>(
+    `
+    SELECT a.country, COUNT(c.id) AS count
+    FROM contributions c
+    JOIN authors a ON c.author_id = a.id
+    WHERE c.status = 'approved'
+    GROUP BY a.country
+    ORDER BY count DESC
+    `,
+  )
+
+  const toPoints = (
+    rows: Array<{ country: string | null; count: string }>,
+  ): CountryDataPoint[] => {
+    const filtered = rows.filter((r) => r.country && r.country.trim() !== "")
+    const total = filtered.reduce((s, r) => s + parseInt(r.count, 10), 0)
+    return filtered.map((r) => ({
+      country: r.country!,
+      count: parseInt(r.count, 10),
+      percentage: total > 0 ? (parseInt(r.count, 10) / total) * 100 : 0,
+    }))
+  }
+
+  const result: Record<string, CountryDataPoint[]> = {
+    all: toPoints(aggResult.rows ?? []),
+  }
+
+  // Per-campaign breakdown
+  if (campaignIds.length > 0) {
+    for (const id of campaignIds) {
+      const { rows } = await query<{ country: string | null; count: string }>(
+        `
+        SELECT a.country, COUNT(c.id) AS count
+        FROM contributions c
+        JOIN authors a ON c.author_id = a.id
+        WHERE c.status = 'approved' AND c.campaign_id = $1
+        GROUP BY a.country
+        ORDER BY count DESC
+        `,
+        [id],
+      )
+      result[id] = toPoints(rows ?? [])
+    }
+  }
+
+  return result
+}
