@@ -1,9 +1,10 @@
 "use client"
 
 import { useMemo, useState, useId } from "react"
-import { Search, X } from "lucide-react"
+import { Search, X, ChevronDown } from "lucide-react"
 import {
   getCampaignPhase,
+  getCampaignStats,
   type Campaign,
   type CampaignPhase,
 } from "@/lib/mock-data"
@@ -11,34 +12,57 @@ import { CampaignCard } from "@/components/campaign-card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 
-type FilterValue = "all" | CampaignPhase
+type FilterValue = "all" | CampaignPhase | "featured"
+type SortValue = "default" | "highest" | "lowest"
 
 const FILTERS: { value: FilterValue; label: string }[] = [
   { value: "all", label: "All" },
   { value: "active", label: "Active Now" },
   { value: "upcoming", label: "Upcoming" },
   { value: "completed", label: "Completed" },
+  { value: "featured", label: "Featured" },
 ]
 
 export function CampaignDirectory({ campaigns }: { campaigns: Campaign[] }) {
   const [query, setQuery] = useState("")
   const [filter, setFilter] = useState<FilterValue>("all")
+  const [sort, setSort] = useState<SortValue>("default")
   const searchId = useId()
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase()
-    return campaigns.filter((campaign) => {
+    const filtered = campaigns.filter((campaign) => {
       const phase = getCampaignPhase(campaign)
-      const matchesFilter = filter === "all" || phase === filter
+      const matchesFilter =
+        filter === "all"
+          ? true
+          : filter === "featured"
+          ? campaign.featured === true
+          : phase === filter
       const matchesQuery =
         q.length === 0 ||
         campaign.title.toLowerCase().includes(q) ||
         campaign.description.toLowerCase().includes(q)
       return matchesFilter && matchesQuery
     })
-  }, [query, filter, campaigns])
+
+    if (sort === "default") return filtered
+
+    return [...filtered].sort((a, b) => {
+      const aLines = getCampaignStats(a).lines
+      const bLines = getCampaignStats(b).lines
+      return sort === "highest" ? bLines - aLines : aLines - bLines
+    })
+  }, [query, filter, sort, campaigns])
 
   return (
     <section aria-labelledby="directory-heading" className="flex flex-col gap-8">
@@ -90,27 +114,51 @@ export function CampaignDirectory({ campaigns }: { campaigns: Campaign[] }) {
           ) : null}
         </div>
 
-        <div
-          role="group"
-          aria-label="Filter campaigns by status"
-          className="flex flex-wrap gap-2"
-        >
-          {FILTERS.map((f) => {
-            const active = filter === f.value
-            return (
-              <Button
-                key={f.value}
-                type="button"
-                size="sm"
-                variant={active ? "default" : "outline"}
-                aria-pressed={active}
-                onClick={() => setFilter(f.value)}
-                className={cn("rounded-full", !active && "text-muted-foreground")}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div
+            role="group"
+            aria-label="Filter campaigns by status"
+            className="flex flex-wrap gap-2"
+          >
+            {FILTERS.map((f) => {
+              const active = filter === f.value
+              return (
+                <Button
+                  key={f.value}
+                  type="button"
+                  size="sm"
+                  variant={active ? "default" : "outline"}
+                  aria-pressed={active}
+                  onClick={() => setFilter(f.value)}
+                  className={cn("rounded-full", !active && "text-muted-foreground")}
+                >
+                  {f.label}
+                </Button>
+              )
+            })}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Label htmlFor="sort-contributions" className="sr-only">
+              Sort by contributions
+            </Label>
+            <Select
+              value={sort}
+              onValueChange={(v) => setSort(v as SortValue)}
+            >
+              <SelectTrigger
+                id="sort-contributions"
+                className="h-9 w-52 rounded-full text-sm"
               >
-                {f.label}
-              </Button>
-            )
-          })}
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="default">Default order</SelectItem>
+                <SelectItem value="highest">Highest contributions</SelectItem>
+                <SelectItem value="lowest">Lowest contributions</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
 

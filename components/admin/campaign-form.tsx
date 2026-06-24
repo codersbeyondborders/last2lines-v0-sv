@@ -96,6 +96,7 @@ export function CampaignForm({ campaign, seedCouplets }: { campaign?: Campaign; 
   const [autoEmailOnPublish, setAutoEmailOnPublish] = useState(
     campaign?.autoEmailOnPublish ?? false,
   )
+  const [featured, setFeatured] = useState(campaign?.featured ?? false)
   const [seeds, setSeeds] = useState<SeedCouplet[]>(
     seedCouplets?.map((s, i) => ({
       id: `seed_${i}`,
@@ -111,10 +112,18 @@ export function CampaignForm({ campaign, seedCouplets }: { campaign?: Campaign; 
   const [error, setError] = useState<string | null>(null)
 
   const titleError = touched && !title.trim() ? "Title is required." : null
+  const taglineError = touched && !tagline.trim() ? "Tagline is required." : null
+  const descriptionError = touched && !description.trim() ? "Description (About this campaign) is required." : null
   const startDateError = touched && !startDate ? "Start date is required." : null
   const closeDateError = touched && !closeDate ? "Close date is required." : null
   const dateRangeError = touched && startDate && closeDate && new Date(startDate) >= new Date(closeDate) ? "Close date must be after start date." : null
-  const isValid = title.trim().length > 0 && startDate && closeDate && new Date(startDate) < new Date(closeDate)
+  const isValid =
+    title.trim().length > 0 &&
+    tagline.trim().length > 0 &&
+    description.trim().length > 0 &&
+    startDate &&
+    closeDate &&
+    new Date(startDate) < new Date(closeDate)
 
   function addSeed() {
     setSeeds((prev) => [
@@ -150,6 +159,7 @@ export function CampaignForm({ campaign, seedCouplets }: { campaign?: Campaign; 
       donationLink: donationLink.trim() || null,
       requireEmailVerification,
       autoEmailOnPublish,
+      featured,
       startDate: new Date(startDate).toISOString(),
       closeDate: new Date(closeDate).toISOString(),
       seedCouplets: seeds.map((s) => ({
@@ -219,24 +229,48 @@ export function CampaignForm({ campaign, seedCouplets }: { campaign?: Campaign; 
         </div>
 
         <div className="flex flex-col gap-2">
-          <Label htmlFor="tagline">Tagline</Label>
+          <Label htmlFor="tagline">
+            Tagline <span className="text-destructive" aria-hidden="true">*</span>
+          </Label>
           <Input
             id="tagline"
             value={tagline}
+            aria-required="true"
+            aria-invalid={Boolean(taglineError)}
+            aria-describedby={taglineError ? "tagline-error" : undefined}
             onChange={(e) => setTagline(e.target.value)}
+            onBlur={() => setTouched(true)}
             placeholder="A living poem written by the world, for the world."
+            className={cn(taglineError && "border-destructive")}
           />
+          {taglineError ? (
+            <p id="tagline-error" role="alert" className="text-xs font-medium text-destructive">
+              {taglineError}
+            </p>
+          ) : null}
         </div>
 
         <div className="flex flex-col gap-2">
-          <Label htmlFor="description">Description</Label>
+          <Label htmlFor="description">
+            About this campaign <span className="text-destructive" aria-hidden="true">*</span>
+          </Label>
           <Textarea
             id="description"
             value={description}
+            aria-required="true"
+            aria-invalid={Boolean(descriptionError)}
+            aria-describedby={descriptionError ? "description-error" : undefined}
             onChange={(e) => setDescription(e.target.value)}
+            onBlur={() => setTouched(true)}
             rows={4}
             placeholder="Describe the cause and what contributors are writing toward."
+            className={cn(descriptionError && "border-destructive")}
           />
+          {descriptionError ? (
+            <p id="description-error" role="alert" className="text-xs font-medium text-destructive">
+              {descriptionError}
+            </p>
+          ) : null}
         </div>
       </FormSection>
 
@@ -379,6 +413,22 @@ export function CampaignForm({ campaign, seedCouplets }: { campaign?: Campaign; 
               ))}
             </SelectContent>
           </Select>
+        </div>
+
+        <div className="flex items-start justify-between gap-4 rounded-lg border border-border bg-card px-4 py-3">
+          <div className="flex flex-col gap-0.5">
+            <Label htmlFor="featured" className="cursor-pointer">
+              Featured
+            </Label>
+            <p className="text-sm text-muted-foreground text-pretty">
+              Highlight this campaign in the public directory with a Featured badge.
+            </p>
+          </div>
+          <Switch
+            id="featured"
+            checked={featured}
+            onCheckedChange={(v) => setFeatured(Boolean(v))}
+          />
         </div>
 
         <div className="flex items-start justify-between gap-4 rounded-lg border border-border bg-card px-4 py-3">

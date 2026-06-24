@@ -62,6 +62,7 @@ interface CampaignRow {
   donation_link: string | null
   require_email_verification: boolean
   auto_email_on_publish: boolean
+  featured: boolean
   start_date: Date
   close_date: Date
   created_at: Date
@@ -89,6 +90,7 @@ function mapCampaign(row: CampaignRow): Campaign {
     donationLink: row.donation_link,
     requireEmailVerification: row.require_email_verification ?? false,
     autoEmailOnPublish: row.auto_email_on_publish ?? false,
+    featured: row.featured ?? false,
     startDate: new Date(row.start_date).toISOString(),
     closeDate: new Date(row.close_date).toISOString(),
     createdAt: new Date(row.created_at).toISOString(),

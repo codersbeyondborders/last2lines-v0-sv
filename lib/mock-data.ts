@@ -42,6 +42,8 @@ export interface Campaign {
   requireEmailVerification: boolean
   /** When true, auto-send confirmation email when couplet is published. */
   autoEmailOnPublish: boolean
+  /** When true, the campaign is highlighted as featured in the directory. */
+  featured: boolean
 }
 
 export interface Contribution {
@@ -109,6 +111,7 @@ export const MOCK_CAMPAIGNS: Campaign[] = [
     createdAt: '2026-01-12T09:00:00.000Z',
     requireEmailVerification: false,
     autoEmailOnPublish: false,
+    featured: true,
   },
   {
     id: 'cmp_water',
@@ -139,6 +142,7 @@ export const MOCK_CAMPAIGNS: Campaign[] = [
     createdAt: '2026-05-28T13:30:00.000Z',
     requireEmailVerification: false,
     autoEmailOnPublish: false,
+    featured: false,
   },
   {
     id: 'cmp_forests',
@@ -169,6 +173,7 @@ export const MOCK_CAMPAIGNS: Campaign[] = [
     createdAt: '2025-09-01T08:00:00.000Z',
     requireEmailVerification: false,
     autoEmailOnPublish: false,
+    featured: false,
   },
 ]
 

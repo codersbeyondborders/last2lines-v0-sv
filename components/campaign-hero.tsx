@@ -15,6 +15,7 @@ export function CampaignHero({
 }: {
   campaign: Campaign
   phase: CampaignPhase
+  featured?: boolean
 }) {
   return (
     <section
@@ -37,9 +38,16 @@ export function CampaignHero({
         />
 
         <div className="relative z-10 mx-auto flex min-h-[24rem] w-full max-w-6xl flex-col justify-end px-6 py-10 sm:min-h-[28rem] sm:py-14">
-          <span className="mb-4 inline-flex w-fit items-center rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">
-            {PHASE_LABEL[phase]}
-          </span>
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            <span className="inline-flex w-fit items-center rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">
+              {PHASE_LABEL[phase]}
+            </span>
+            {campaign.featured ? (
+              <span className="inline-flex w-fit items-center rounded-full bg-amber-500 px-3 py-1 text-xs font-semibold text-white shadow-sm">
+                Featured
+              </span>
+            ) : null}
+          </div>
           <h1
             id="campaign-hero-heading"
             className="max-w-3xl font-serif text-4xl font-semibold tracking-tight text-balance text-white sm:text-5xl"

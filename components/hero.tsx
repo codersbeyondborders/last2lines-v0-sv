@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { ArrowRight, Sparkles } from "lucide-react"
+import { Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { CountUp } from "@/components/count-up"
 import {
@@ -48,17 +48,6 @@ export function Hero({ campaign }: HeroProps) {
         </dl>
 
         <div className="flex flex-col items-center gap-3 sm:flex-row">
-          <Button
-            size="lg"
-            nativeButton={false}
-            className="h-11 px-6 text-base"
-            render={
-              <Link href="/#contribute">
-                Write Your Two Lines
-                <ArrowRight className="size-4" aria-hidden="true" />
-              </Link>
-            }
-          />
           <Button
             size="lg"
             variant="outline"

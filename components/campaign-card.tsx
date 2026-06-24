@@ -46,6 +46,11 @@ export function CampaignCard({ campaign }: { campaign: Campaign }) {
         >
           {badge.label}
         </span>
+        {campaign.featured ? (
+          <span className="absolute right-3 top-3 rounded-full bg-amber-500 px-3 py-1 text-xs font-semibold text-white shadow-sm">
+            Featured
+          </span>
+        ) : null}
       </div>
 
       <div className="flex flex-1 flex-col gap-3 p-5">
@@ -73,9 +78,14 @@ export function CampaignCard({ campaign }: { campaign: Campaign }) {
           </p>
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium text-foreground">
+              {stats.contributors.toLocaleString()}{" "}
+              <span className="text-muted-foreground">
+                {stats.contributors === 1 ? "Author" : "Authors"}
+              </span>
+              {", "}
               {stats.lines.toLocaleString()}{" "}
               <span className="text-muted-foreground">
-                {stats.lines === 1 ? "Line" : "Lines"} Written
+                {stats.lines === 1 ? "Line" : "Lines"}
               </span>
             </p>
             <span

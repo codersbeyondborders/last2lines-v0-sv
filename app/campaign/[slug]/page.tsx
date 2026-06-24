@@ -263,10 +263,6 @@ export default async function CampaignPage({
               >
                 {campaign.title}
               </h2>
-              <p className="mt-3 leading-relaxed text-muted-foreground text-pretty">
-                {stats.couplets.toLocaleString()} couplets, stitched into one
-                continuous voice.
-              </p>
             </div>
             <Suspense fallback={<PoemSkeleton />}>
               <PoemSection campaignId={campaign.id} />
@@ -277,21 +273,10 @@ export default async function CampaignPage({
         {/* Contribution form */}
         <section
           id="contribute"
-          aria-labelledby="contribute-heading"
+          aria-label="Contribute your two lines"
           className="scroll-mt-20 border-b border-border bg-muted/30"
         >
           <div className="mx-auto w-full max-w-2xl px-4 py-12 sm:px-6 sm:py-16">
-            <div className="mb-8 text-center">
-              <h2
-                id="contribute-heading"
-                className="font-serif text-2xl font-semibold text-balance sm:text-3xl"
-              >
-                Add your two lines
-              </h2>
-              <p className="mt-3 leading-relaxed text-muted-foreground text-pretty">
-                Your couplet becomes a permanent verse in this living poem.
-              </p>
-            </div>
             <CampaignSubmission campaign={campaign} phase={phase} />
           </div>
         </section>
