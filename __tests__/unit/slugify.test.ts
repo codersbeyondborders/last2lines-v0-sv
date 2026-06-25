@@ -1,10 +1,5 @@
-import { describe, it, expect, vi } from "vitest"
-
-// actions.ts imports ai-moderation which imports server-only — mock it first
-vi.mock("server-only", () => ({}))
-vi.mock("@/lib/ai-moderation", () => ({ moderateCouplet: vi.fn() }))
-
-import { slugify } from "@/lib/actions"
+import { describe, it, expect } from "vitest"
+import { slugify } from "@/lib/utils"
 
 describe("slugify()", () => {
   it("lowercases the input", () => {
