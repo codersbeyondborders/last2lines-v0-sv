@@ -2,6 +2,7 @@ import { Pool, type ClientBase } from 'pg'
 import { Signer } from '@aws-sdk/rds-signer'
 import { awsCredentialsProvider } from '@vercel/functions/oidc'
 import { attachDatabasePool } from '@vercel/functions'
+import { isRetryable, withRetry } from '@/lib/db-retry-logic'
 
 const signer = new Signer({
   credentials: awsCredentialsProvider({
@@ -26,8 +27,13 @@ const pool = new Pool({
   // With RDS Proxy in front (recommended for production), the proxy multiplexes
   // connections so a low client-side max does not limit throughput.
   max: 5,
-  idleTimeoutMillis: 10_000,
-  connectionTimeoutMillis: 5_000,
+  // Serverless cold starts require IAM token fetch + SSL handshake to Aurora,
+  // which can take 3-8 s. 30 s gives enough headroom without hanging forever.
+  connectionTimeoutMillis: 30_000,
+  // Keep idle connections alive long enough to be reused across warm
+  // invocations. Aurora closes idle connections after 8 min by default,
+  // so 60 s is safe.
+  idleTimeoutMillis: 60_000,
 })
 attachDatabasePool(pool)
 
@@ -35,8 +41,10 @@ export async function query<T = Record<string, unknown>>(
   text: string,
   params?: unknown[],
 ): Promise<{ rows: T[]; rowCount: number | null }> {
-  const result = await pool.query(text, params)
-  return { rows: result.rows as T[], rowCount: result.rowCount }
+  return withRetry(async () => {
+    const result = await pool.query(text, params)
+    return { rows: result.rows as T[], rowCount: result.rowCount }
+  })
 }
 
 export async function withConnection<T>(

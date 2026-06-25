@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 import { nanoid } from "nanoid"
+import { slugify } from "@/lib/utils"
 import { query, withConnection } from "@/lib/db"
 import { createClient } from "@/lib/supabase/server"
 import { moderateCouplet } from "@/lib/ai-moderation"
@@ -536,18 +537,6 @@ async function sendPublishConfirmationEmail(input: {
 // ----------------------------------------------------------------------------
 // Campaign create / update / delete
 // ----------------------------------------------------------------------------
-
-function slugify(input: string): string {
-  return (
-    input
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "")
-      .slice(0, 60) || "campaign"
-  )
-}
-
 
 /** Create a new campaign. Generates a unique slug from the title. */
 export async function createCampaign(
