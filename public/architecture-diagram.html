@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=1600" />
+<title>Last2Lines — Architecture Diagram</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: #0a0e1a;
+    color: #e2e8f0;
+    width: 1600px;
+    padding: 48px 48px 32px 48px;
+    display: inline-block;
+  }
+
+  /* ── Header ── */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 40px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid #1e2d3d;
+  }
+  .header-left { display: flex; align-items: center; gap: 14px; }
+  .logo-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: #22c55e; box-shadow: 0 0 8px #22c55e80;
+  }
+  .header h1 { font-size: 22px; font-weight: 700; color: #f8fafc; letter-spacing: -0.3px; }
+  .header p { font-size: 13px; color: #64748b; margin-top: 2px; }
+  .badge {
+    background: #0f1f11; border: 1px solid #166534;
+    color: #86efac; font-size: 11px; font-weight: 600;
+    padding: 4px 10px; border-radius: 20px; letter-spacing: 0.5px;
+  }
+
+  /* ── Grid ── */
+  .grid {
+    display: grid;
+    grid-template-columns: 220px 1fr 220px;
+    grid-template-rows: auto auto auto;
+    gap: 0;
+    position: relative;
+  }
+
+  /* ── Layer label ── */
+  .layer-label {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #475569;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px 8px;
+  }
+
+  /* ── Swimlane ── */
+  .lane {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .swimlane {
+    border: 1px solid #1e2d3d;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+    position: relative;
+  }
+  .swimlane-title {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .swimlane-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: currentColor;
+    opacity: 0.15;
+  }
+
+  /* Layer colours */
+  .lane-client    .swimlane { background: #0d1520; border-color: #1e3a5f; }
+  .lane-client    .swimlane-title { color: #60a5fa; }
+  .lane-edge      .swimlane { background: #0f1520; border-color: #1e3a2f; }
+  .lane-edge      .swimlane-title { color: #34d399; }
+  .lane-app       .swimlane { background: #0f1520; border-color: #2d2040; }
+  .lane-app       .swimlane-title { color: #a78bfa; }
+  .lane-data      .swimlane { background: #130f0a; border-color: #3d2000; }
+  .lane-data      .swimlane-title { color: #fb923c; }
+  .lane-external  .swimlane { background: #0f1215; border-color: #1e3040; }
+  .lane-external  .swimlane-title { color: #38bdf8; }
+  .lane-observability .swimlane { background: #120f1a; border-color: #2d1f40; }
+  .lane-observability .swimlane-title { color: #c084fc; }
+
+  /* ── Card chips ── */
+  .cards {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .card {
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 12px;
+    border: 1px solid transparent;
+    min-width: 130px;
+    flex: 1;
+  }
+  .card-title {
+    font-weight: 600;
+    font-size: 12px;
+    margin-bottom: 3px;
+    white-space: nowrap;
+  }
+  .card-sub {
+    font-size: 10.5px;
+    color: #64748b;
+    line-height: 1.4;
+  }
+
+  /* card themes */
+  .card-blue   { background: #0d1f35; border-color: #1d4ed860; color: #93c5fd; }
+  .card-green  { background: #0b1f14; border-color: #16a34a60; color: #86efac; }
+  .card-purple { background: #150f28; border-color: #7c3aed60; color: #c4b5fd; }
+  .card-orange { background: #1a0f05; border-color: #c2410c60; color: #fdba74; }
+  .card-sky    { background: #0a1525; border-color: #0284c760; color: #7dd3fc; }
+  .card-pink   { background: #1a0f1a; border-color: #9d174d60; color: #f9a8d4; }
+  .card-yellow { background: #1a1505; border-color: #a1600060; color: #fde68a; }
+  .card-slate  { background: #111827; border-color: #37415160; color: #94a3b8; }
+  .card-rose   { background: #1a0a0a; border-color: #be123c60; color: #fda4af; }
+  .card-teal   { background: #061518; border-color: #0d947060; color: #5eead4; }
+
+  /* ── Arrow column ── */
+  .arrows-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-around;
+    padding: 0 16px;
+    gap: 8px;
+  }
+  .arrow-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  .arrow-line {
+    width: 2px;
+    height: 32px;
+    background: linear-gradient(to bottom, #1e3a2f, #22c55e40);
+    position: relative;
+  }
+  .arrow-line::after {
+    content: '';
+    position: absolute;
+    bottom: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 7px solid #22c55e80;
+  }
+  .arrow-label {
+    font-size: 9px;
+    color: #475569;
+    letter-spacing: 0.5px;
+    text-align: center;
+    font-weight: 500;
+  }
+
+  /* ── Main layout ── */
+  .diagram {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .row {
+    display: grid;
+    grid-template-columns: 40px 1fr 40px;
+    align-items: start;
+    margin-bottom: 4px;
+  }
+
+  .row-connector {
+    display: flex;
+    justify-content: center;
+    margin: 0;
+    position: relative;
+    height: 32px;
+  }
+  .row-connector::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 0;
+    transform: translateX(-50%);
+    width: 2px;
+    height: 100%;
+    background: linear-gradient(to bottom, #1e3a2f80, #22c55e30);
+  }
+  .row-connector::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: 0;
+    transform: translateX(-50%);
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 7px solid #22c55e50;
+  }
+  .conn-label {
+    position: absolute;
+    left: calc(50% + 10px);
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 9px;
+    color: #334155;
+    white-space: nowrap;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+  }
+
+  /* ── Horizontal connector row (for third-party) ── */
+  .h-section {
+    display: grid;
+    grid-template-columns: 1fr 40px 1fr;
+    gap: 0;
+    align-items: start;
+    margin-top: 0;
+  }
+  .h-connector {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    min-height: 60px;
+  }
+  .h-connector-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  .h-line {
+    width: 2px;
+    height: 60px;
+    background: linear-gradient(to bottom, #22c55e30, #22c55e30);
+  }
+
+  /* ── Footer ── */
+  .footer {
+    display: flex;
+    gap: 12px;
+    margin-top: 32px;
+    padding-top: 20px;
+    border-top: 1px solid #1e2d3d;
+    flex-wrap: wrap;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: #64748b;
+  }
+  .legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 3px;
+  }
+
+  /* ── Full width sections ── */
+  .full-row {
+    grid-column: 2;
+  }
+
+  /* Section wrapper for inline side labels */
+  .section-row {
+    display: flex;
+    gap: 16px;
+    align-items: stretch;
+    margin-bottom: 16px;
+  }
+  .section-side-label {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #334155;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+  }
+
+  /* tag pill */
+  .tag {
+    display: inline-block;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-top: 4px;
+  }
+  .tag-green  { background: #052e16; color: #86efac; }
+  .tag-blue   { background: #0c1a2e; color: #93c5fd; }
+  .tag-purple { background: #1e0f3d; color: #c4b5fd; }
+  .tag-orange { background: #2c1000; color: #fdba74; }
+  .tag-slate  { background: #111827; color: #94a3b8; }
+
+  /* Data flow arrows between major sections */
+  .flow-arrow {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin: 0 auto;
+    width: fit-content;
+  }
+  .flow-line-h {
+    width: 48px; height: 2px;
+    background: linear-gradient(to right, #1e3a2f, #22c55e40);
+  }
+  .flow-arrowhead {
+    border-top: 4px solid transparent;
+    border-bottom: 4px solid transparent;
+    border-left: 6px solid #22c55e60;
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════ HEADER ═══════════════════════════ -->
+<div class="header">
+  <div class="header-left">
+    <div class="logo-dot"></div>
+    <div>
+      <h1>Last2Lines — System Architecture</h1>
+      <p>Full-stack production architecture · Next.js 16 · AWS Aurora PostgreSQL · Supabase Auth · Vercel Edge</p>
+    </div>
+  </div>
+  <div class="badge">v2.0 · 2026</div>
+</div>
+
+<!-- ═══════════════════════════ DIAGRAM ═══════════════════════════ -->
+<div class="diagram">
+
+  <!-- ── ROW 1: CLIENT ── -->
+  <div class="section-row">
+    <div class="section-side-label" style="color:#60a5fa;">CLIENT</div>
+    <div style="flex:1;">
+      <div class="swimlane" style="background:#0d1520;border-color:#1e3a5f;">
+        <div class="swimlane-title" style="color:#60a5fa;">Client Layer</div>
+        <div class="cards">
+          <div class="card card-blue">
+            <div class="card-title">Browser / PWA</div>
+            <div class="card-sub">Next.js App Router · RSC streaming · React 19</div>
+            <span class="tag tag-blue">HMR</span>
+          </div>
+          <div class="card card-blue">
+            <div class="card-title">Campaign Pages</div>
+            <div class="card-sub">Public · ISR 30s · opengraph-image · loading.tsx</div>
+            <span class="tag tag-green">ISR</span>
+          </div>
+          <div class="card card-blue">
+            <div class="card-title">Dashboard / Admin</div>
+            <div class="card-sub">Protected · force-dynamic · Supabase session</div>
+            <span class="tag tag-blue">Auth</span>
+          </div>
+          <div class="card card-blue">
+            <div class="card-title">Static Pages</div>
+            <div class="card-sub">About · Contact · Terms · revalidate 86400s</div>
+            <span class="tag tag-green">ISR</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- connector -->
+  <div class="row-connector"><div class="conn-label">HTTPS · Edge Network</div></div>
+
+  <!-- ── ROW 2: VERCEL EDGE ── -->
+  <div class="section-row">
+    <div class="section-side-label" style="color:#34d399;">VERCEL EDGE</div>
+    <div style="flex:1;">
+      <div class="swimlane" style="background:#0b1a12;border-color:#1e3a2f;">
+        <div class="swimlane-title" style="color:#34d399;">Vercel Edge Network</div>
+        <div class="cards">
+          <div class="card card-green">
+            <div class="card-title">Edge Middleware</div>
+            <div class="card-sub">Session refresh via @supabase/ssr · Scoped to /dashboard /admin /auth /api only</div>
+            <span class="tag tag-green">Edge Runtime</span>
+          </div>
+          <div class="card card-green">
+            <div class="card-title">ISR Cache</div>
+            <div class="card-sub">Invocation Shielding · CDN cache per route · Stale-while-revalidate</div>
+            <span class="tag tag-green">CDN</span>
+          </div>
+          <div class="card card-green">
+            <div class="card-title">OG Image Generation</div>
+            <div class="card-sub">next/og · ImageResponse · Root, /campaign/[slug], /about</div>
+            <span class="tag tag-green">Edge Runtime</span>
+          </div>
+          <div class="card card-green">
+            <div class="card-title">Skew Protection</div>
+            <div class="card-sub">deploymentId pinning · Prevents stale JS chunk mismatches on redeploy</div>
+            <span class="tag tag-slate">Platform</span>
+          </div>
+          <div class="card card-green">
+            <div class="card-title">Image Optimization</div>
+            <div class="card-sub">next/image · AVIF + WebP · remotePatterns allowlist</div>
+            <span class="tag tag-green">CDN</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- connector -->
+  <div class="row-connector"><div class="conn-label">Node.js Runtime · Fluid Compute</div></div>
+
+  <!-- ── ROW 3: APP LAYER ── -->
+  <div class="section-row">
+    <div class="section-side-label" style="color:#a78bfa;">APP LAYER</div>
+    <div style="flex:1;">
+      <div class="swimlane" style="background:#0f1020;border-color:#2d2040;">
+        <div class="swimlane-title" style="color:#a78bfa;">Next.js App Layer · Vercel Serverless Functions</div>
+        <div class="cards">
+          <div class="card card-purple">
+            <div class="card-title">RSC · Streaming SSR</div>
+            <div class="card-sub">loading.tsx skeletons · Suspense boundaries · App Router pages</div>
+            <span class="tag tag-purple">Streaming</span>
+          </div>
+          <div class="card card-purple">
+            <div class="card-title">API · /api/send-otp</div>
+            <div class="card-sub">OTP generation · Resend email · maxDuration 10s · no-cache headers</div>
+            <span class="tag tag-orange">10s</span>
+          </div>
+          <div class="card card-purple">
+            <div class="card-title">API · /api/verify-otp</div>
+            <div class="card-sub">OTP validation · DB write · maxDuration 10s · no-cache headers</div>
+            <span class="tag tag-orange">10s</span>
+          </div>
+          <div class="card card-purple">
+            <div class="card-title">API · /api/upload</div>
+            <div class="card-sub">Multipart file → Vercel Blob · PNG/JPG validation · maxDuration 30s</div>
+            <span class="tag tag-orange">30s</span>
+          </div>
+          <div class="card card-purple">
+            <div class="card-title">API · /api/verify-email</div>
+            <div class="card-sub">Token verification · contributions table update · maxDuration 10s</div>
+            <span class="tag tag-orange">10s</span>
+          </div>
+          <div class="card card-purple">
+            <div class="card-title">API · Admin Routes</div>
+            <div class="card-sub">migrate-otps, seed-campaigns · DDL + bulk inserts · maxDuration 60s</div>
+            <span class="tag tag-orange">60s</span>
+          </div>
+          <div class="card card-purple">
+            <div class="card-title">Auth · /auth/callback</div>
+            <div class="card-sub">Supabase PKCE code exchange · session cookie set · maxDuration 10s</div>
+            <span class="tag tag-orange">10s</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- connector -->
+  <div class="row-connector"><div class="conn-label">TCP · SSL · IAM Token / Session Token</div></div>
+
+  <!-- ── ROW 4: DATA + THIRD PARTY side-by-side ── -->
+  <div class="section-row" style="align-items:stretch; gap:16px;">
+    <div class="section-side-label" style="color:#fb923c;">DATA &amp; SERVICES</div>
+    <div style="flex:1; display:flex; gap:16px;">
+
+      <!-- AWS Aurora -->
+      <div style="flex:1.4;">
+        <div class="swimlane" style="background:#130f0a;border-color:#3d2000; height:100%;">
+          <div class="swimlane-title" style="color:#fb923c;">AWS Aurora PostgreSQL</div>
+          <div class="cards" style="flex-direction:column;">
+            <div class="card card-orange" style="min-width:unset;">
+              <div class="card-title">Connection Pool (pg · node-postgres)</div>
+              <div class="card-sub">max: 5 · connectionTimeout: 30s · idleTimeout: 60s · attachDatabasePool · withConnection for transactions · 2x retry on timeout</div>
+            </div>
+            <div class="card card-orange" style="min-width:unset;">
+              <div class="card-title">IAM Authentication</div>
+              <div class="card-sub">@aws-sdk/rds-signer · awsCredentialsProvider (OIDC) · VERCEL_OIDC_TOKEN → AWS_ROLE_ARN · ssl: rejectUnauthorized: false</div>
+              <span class="tag tag-orange">Least Privilege IAM</span>
+            </div>
+            <div class="card card-orange" style="min-width:unset;">
+              <div class="card-title">Tables</div>
+              <div class="card-sub">campaigns · contributions · email_otps · authors · campaign_stats</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Supabase -->
+      <div style="flex:1;">
+        <div class="swimlane" style="background:#080f1a;border-color:#1e3a5f; height:100%;">
+          <div class="swimlane-title" style="color:#38bdf8;">Supabase Auth</div>
+          <div class="cards" style="flex-direction:column;">
+            <div class="card card-sky" style="min-width:unset;">
+              <div class="card-title">Authentication</div>
+              <div class="card-sub">@supabase/ssr · createServerClient · Email + password · PKCE flow</div>
+            </div>
+            <div class="card card-sky" style="min-width:unset;">
+              <div class="card-title">Session Management</div>
+              <div class="card-sub">Cookie-based sessions · Middleware refresh · Protected route guard on /dashboard /admin</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- External Services -->
+      <div style="flex:1;">
+        <div class="swimlane" style="background:#0a0f1a;border-color:#1e2d4f; height:100%;">
+          <div class="swimlane-title" style="color:#7dd3fc;">External Services</div>
+          <div class="cards" style="flex-direction:column;">
+            <div class="card card-sky" style="min-width:unset;">
+              <div class="card-title">Resend (Email)</div>
+              <div class="card-sub">OTP emails · Verification emails · RESEND_API_KEY · HTML templates</div>
+            </div>
+            <div class="card card-sky" style="min-width:unset;">
+              <div class="card-title">Vercel Blob</div>
+              <div class="card-sub">Image uploads · PNG/JPG · @vercel/blob · put() API · maxDuration 30s</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- connector -->
+  <div class="row-connector"><div class="conn-label">OpenTelemetry · @vercel/otel (Node.js runtime only)</div></div>
+
+  <!-- ── ROW 5: OBSERVABILITY + PERFORMANCE ── -->
+  <div class="section-row">
+    <div class="section-side-label" style="color:#c084fc;">OBS &amp; PERF</div>
+    <div style="flex:1;">
+      <div class="swimlane" style="background:#0f0a1a;border-color:#2d1f40;">
+        <div class="swimlane-title" style="color:#c084fc;">Observability · Performance · Security</div>
+        <div class="cards">
+          <div class="card card-purple">
+            <div class="card-title">@vercel/otel</div>
+            <div class="card-sub">instrumentation.ts · Node.js runtime only · Fetch trace propagation to Supabase + Resend</div>
+            <span class="tag tag-purple">Tracing</span>
+          </div>
+          <div class="card card-purple">
+            <div class="card-title">Speed Insights</div>
+            <div class="card-sub">@vercel/speed-insights · LCP · INP · CLS · Real user metrics in production</div>
+            <span class="tag tag-purple">CWV</span>
+          </div>
+          <div class="card card-purple">
+            <div class="card-title">Web Analytics</div>
+            <div class="card-sub">@vercel/analytics · Production-gated · Traffic + conversion · Campaign engagement</div>
+            <span class="tag tag-purple">Analytics</span>
+          </div>
+          <div class="card card-purple">
+            <div class="card-title">Cache-Control Headers</div>
+            <div class="card-sub">no-cache, no-store, must-revalidate on all 8 API routes · Prevents CDN caching of auth/transactional data</div>
+            <span class="tag tag-slate">Security</span>
+          </div>
+          <div class="card card-purple">
+            <div class="card-title">SSL + IAM</div>
+            <div class="card-sub">Aurora: ssl rejectUnauthorized · OIDC federation · rds-db:connect only · Parameterized queries</div>
+            <span class="tag tag-slate">Security</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════════ LEGEND ═══════════════════════════ -->
+<div class="footer">
+  <div class="legend-item"><div class="legend-dot" style="background:#3b82f6;"></div>Client Layer</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#22c55e;"></div>Vercel Edge Network</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#8b5cf6;"></div>App Layer · Serverless Functions</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#f97316;"></div>AWS Aurora PostgreSQL</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#0ea5e9;"></div>Supabase Auth + External Services</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#a855f7;"></div>Observability · Performance · Security</div>
+  <div class="legend-item" style="margin-left:auto;"><div class="legend-dot" style="background:#22c55e80;border:1px solid #22c55e;"></div>Data flow direction</div>
+</div>
+
+</body>
+</html>
