@@ -26,17 +26,46 @@ const pool = new Pool({
   // With RDS Proxy in front (recommended for production), the proxy multiplexes
   // connections so a low client-side max does not limit throughput.
   max: 5,
-  idleTimeoutMillis: 10_000,
-  connectionTimeoutMillis: 5_000,
+  // Serverless cold starts require IAM token fetch + SSL handshake to Aurora,
+  // which can take 3-8 s. 30 s gives enough headroom without hanging forever.
+  connectionTimeoutMillis: 30_000,
+  // Keep idle connections alive long enough to be reused across warm
+  // invocations. Aurora closes idle connections after 8 min by default,
+  // so 60 s is safe.
+  idleTimeoutMillis: 60_000,
 })
 attachDatabasePool(pool)
+
+const RETRYABLE_ERRORS = new Set([
+  'Connection terminated due to connection timeout',
+  'Connection terminated unexpectedly',
+  'connection timeout',
+  'ECONNRESET',
+  'ETIMEDOUT',
+])
+
+function isRetryable(err: unknown): boolean {
+  if (!(err instanceof Error)) return false
+  return RETRYABLE_ERRORS.has(err.message) ||
+    [...RETRYABLE_ERRORS].some((msg) => err.message.includes(msg))
+}
 
 export async function query<T = Record<string, unknown>>(
   text: string,
   params?: unknown[],
+  retries = 2,
 ): Promise<{ rows: T[]; rowCount: number | null }> {
-  const result = await pool.query(text, params)
-  return { rows: result.rows as T[], rowCount: result.rowCount }
+  try {
+    const result = await pool.query(text, params)
+    return { rows: result.rows as T[], rowCount: result.rowCount }
+  } catch (err) {
+    if (retries > 0 && isRetryable(err)) {
+      // Brief pause before retrying to let the connection pool recover.
+      await new Promise((resolve) => setTimeout(resolve, 200))
+      return query<T>(text, params, retries - 1)
+    }
+    throw err
+  }
 }
 
 export async function withConnection<T>(
