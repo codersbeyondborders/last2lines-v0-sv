@@ -96,7 +96,6 @@ export function CampaignForm({ campaign, seedCouplets }: { campaign?: Campaign; 
   const [autoEmailOnPublish, setAutoEmailOnPublish] = useState(
     campaign?.autoEmailOnPublish ?? false,
   )
-  const [featured, setFeatured] = useState(campaign?.featured ?? false)
   const [seeds, setSeeds] = useState<SeedCouplet[]>(
     seedCouplets?.map((s, i) => ({
       id: `seed_${i}`,
@@ -159,7 +158,6 @@ export function CampaignForm({ campaign, seedCouplets }: { campaign?: Campaign; 
       donationLink: donationLink.trim() || null,
       requireEmailVerification,
       autoEmailOnPublish,
-      featured,
       startDate: new Date(startDate).toISOString(),
       closeDate: new Date(closeDate).toISOString(),
       seedCouplets: seeds.map((s) => ({
@@ -413,22 +411,6 @@ export function CampaignForm({ campaign, seedCouplets }: { campaign?: Campaign; 
               ))}
             </SelectContent>
           </Select>
-        </div>
-
-        <div className="flex items-start justify-between gap-4 rounded-lg border border-border bg-card px-4 py-3">
-          <div className="flex flex-col gap-0.5">
-            <Label htmlFor="featured" className="cursor-pointer">
-              Featured
-            </Label>
-            <p className="text-sm text-muted-foreground text-pretty">
-              Highlight this campaign in the public directory with a Featured badge.
-            </p>
-          </div>
-          <Switch
-            id="featured"
-            checked={featured}
-            onCheckedChange={(v) => setFeatured(Boolean(v))}
-          />
         </div>
 
         <div className="flex items-start justify-between gap-4 rounded-lg border border-border bg-card px-4 py-3">
