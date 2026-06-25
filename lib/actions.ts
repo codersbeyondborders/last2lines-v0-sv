@@ -537,7 +537,7 @@ async function sendPublishConfirmationEmail(input: {
 // Campaign create / update / delete
 // ----------------------------------------------------------------------------
 
-function slugify(input: string): string {
+export function slugify(input: string): string {
   return (
     input
       .toLowerCase()

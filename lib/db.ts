@@ -2,6 +2,7 @@ import { Pool, type ClientBase } from 'pg'
 import { Signer } from '@aws-sdk/rds-signer'
 import { awsCredentialsProvider } from '@vercel/functions/oidc'
 import { attachDatabasePool } from '@vercel/functions'
+import { isRetryable, withRetry } from '@/lib/db-retry-logic'
 
 const signer = new Signer({
   credentials: awsCredentialsProvider({
@@ -36,36 +37,14 @@ const pool = new Pool({
 })
 attachDatabasePool(pool)
 
-const RETRYABLE_ERRORS = new Set([
-  'Connection terminated due to connection timeout',
-  'Connection terminated unexpectedly',
-  'connection timeout',
-  'ECONNRESET',
-  'ETIMEDOUT',
-])
-
-function isRetryable(err: unknown): boolean {
-  if (!(err instanceof Error)) return false
-  return RETRYABLE_ERRORS.has(err.message) ||
-    [...RETRYABLE_ERRORS].some((msg) => err.message.includes(msg))
-}
-
 export async function query<T = Record<string, unknown>>(
   text: string,
   params?: unknown[],
-  retries = 2,
 ): Promise<{ rows: T[]; rowCount: number | null }> {
-  try {
+  return withRetry(async () => {
     const result = await pool.query(text, params)
     return { rows: result.rows as T[], rowCount: result.rowCount }
-  } catch (err) {
-    if (retries > 0 && isRetryable(err)) {
-      // Brief pause before retrying to let the connection pool recover.
-      await new Promise((resolve) => setTimeout(resolve, 200))
-      return query<T>(text, params, retries - 1)
-    }
-    throw err
-  }
+  })
 }
 
 export async function withConnection<T>(
