@@ -1,3 +1,5 @@
+import { withBotId } from "botid/next/config"
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Skew Protection: pins static assets and client-side navigation to the
@@ -27,4 +29,4 @@ const nextConfig = {
   },
 }
 
-export default nextConfig
+export default withBotId(nextConfig)

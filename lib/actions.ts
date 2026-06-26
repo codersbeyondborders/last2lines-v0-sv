@@ -1,5 +1,6 @@
 "use server"
 
+import { checkBotId } from "botid/server"
 import { revalidatePath } from "next/cache"
 import { nanoid } from "nanoid"
 import { slugify } from "@/lib/utils"
@@ -43,6 +44,15 @@ export async function submitContribution(input: {
   /** True when the caller already completed the inline OTP verification step. */
   emailVerified?: boolean
 }): Promise<SubmitResult> {
+  // Bot detection — must pass before any other work.
+  // checkBotId() verifies the proof-of-work token injected by the BotID
+  // client SDK. Automated submissions without a valid token are rejected here
+  // before they touch the database or the AI moderation pipeline.
+  const { isBot } = await checkBotId()
+  if (isBot) {
+    return { ok: false, error: "Automated submissions are not permitted." }
+  }
+
   const fullName = input.fullName?.trim()
   const email = input.email?.trim().toLowerCase()
   const lineOne = input.lineOne?.trim()
