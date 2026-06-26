@@ -1,5 +1,6 @@
 "use server"
 
+import { checkBotId } from "botid/server"
 import { revalidatePath } from "next/cache"
 import { nanoid } from "nanoid"
 import { slugify } from "@/lib/utils"
@@ -43,6 +44,21 @@ export async function submitContribution(input: {
   /** True when the caller already completed the inline OTP verification step. */
   emailVerified?: boolean
 }): Promise<SubmitResult> {
+  // Bot detection — must pass before any other work.
+  // checkBotId() calls the Vercel BotID API which requires a Vercel OIDC token.
+  // This token is only present in deployed Vercel environments, not in local
+  // dev or preview sandboxes. We fail open on any error so that missing
+  // infrastructure never blocks legitimate users; the AI moderation pipeline
+  // provides a second layer of protection regardless.
+  try {
+    const { isBot } = await checkBotId()
+    if (isBot) {
+      return { ok: false, error: "Automated submissions are not permitted." }
+    }
+  } catch {
+    // VERCEL_OIDC_TOKEN not available (local dev / sandbox) — allow through.
+  }
+
   const fullName = input.fullName?.trim()
   const email = input.email?.trim().toLowerCase()
   const lineOne = input.lineOne?.trim()
