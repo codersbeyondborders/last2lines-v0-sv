@@ -2,6 +2,7 @@ import { Suspense } from "react"
 import { notFound } from "next/navigation"
 import Link from "next/link"
 import { ArrowLeft, Heart, PlayCircle } from "lucide-react"
+import { SocialShare } from "@/components/social-share"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { CampaignHero } from "@/components/campaign-hero"
@@ -204,7 +205,14 @@ export default async function CampaignPage({
                   />
                 )}
               </div>
-              
+
+              <div className="mt-6 pt-6 border-t border-border">
+                <SocialShare
+                  title={campaign.title}
+                  tagline={campaign.tagline}
+                  slug={campaign.slug}
+                />
+              </div>
             </article>
 
             <aside aria-labelledby="how-heading">
