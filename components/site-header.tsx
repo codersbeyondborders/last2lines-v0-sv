@@ -3,7 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { BookOpen, Menu, X } from "lucide-react"
+import { Menu, X } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { Button } from "@/components/ui/button"
 import {
@@ -51,13 +51,9 @@ export function SiteHeader() {
               className={cn(
                 "rounded-md px-3 py-2 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 pathname === link.href && "text-foreground",
-                link.label === "Archives" && "flex items-center gap-1.5",
               )}
               aria-current={pathname === link.href ? "page" : undefined}
             >
-              {link.label === "Archives" && (
-                <BookOpen className="size-3.5" aria-hidden="true" />
-              )}
               {link.label}
             </Link>
           ))}
@@ -107,13 +103,9 @@ export function SiteHeader() {
                   pathname === link.href
                     ? "bg-accent text-accent-foreground"
                     : "text-muted-foreground",
-                  link.label === "Archives" && "text-primary hover:text-primary",
                 )}
                 aria-current={pathname === link.href ? "page" : undefined}
               >
-                {link.label === "Archives" && (
-                  <BookOpen className="size-4 shrink-0" aria-hidden="true" />
-                )}
                 {link.label}
               </Link>
             ))}
