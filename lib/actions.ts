@@ -361,6 +361,31 @@ export async function moderateContribution(input: {
   return { ok: true }
 }
 
+/**
+ * Permanently delete an author and all their contributions.
+ * Contributions cascade-delete via the ON DELETE CASCADE FK constraint.
+ */
+export async function deleteAuthor(id: string): Promise<SubmitResult> {
+  try {
+    await requireAdmin()
+  } catch {
+    return { ok: false, error: "You must be signed in." }
+  }
+
+  try {
+    await query(`DELETE FROM authors WHERE id = $1`, [id])
+  } catch (err) {
+    console.log("[v0] deleteAuthor error:", err)
+    return { ok: false, error: "Could not delete this author." }
+  }
+
+  revalidatePath("/dashboard/authors")
+  revalidatePath("/dashboard/contributions")
+  revalidatePath("/dashboard")
+  revalidatePath("/campaign/[slug]")
+  return { ok: true }
+}
+
 /** Toggle an author's banned/active status. */
 export async function setAuthorStatus(input: {
   id: string
@@ -578,9 +603,9 @@ export async function createCampaign(
           accent_color, status, ai_moderation, ai_level,
           background_image_url, campaign_images, video_link, donation_link,
           require_email_verification, auto_email_on_publish, featured,
-          start_date, close_date, created_at, updated_at)
+          partners, start_date, close_date, created_at, updated_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
-               $16, $17, $18, $19, $20, now(), now())`,
+               $16, $17, $18, $19, $20, $21, now(), now())`,
       [
         id,
         slug,
@@ -600,6 +625,7 @@ export async function createCampaign(
         input.requireEmailVerification,
         input.autoEmailOnPublish,
         input.featured ?? false,
+        (input.partners ?? []).map((p) => p.trim()).filter(Boolean),
         new Date(input.startDate).toISOString(),
         new Date(input.closeDate).toISOString(),
       ],
@@ -649,7 +675,8 @@ export async function updateCampaign(
              ai_moderation = $6, ai_level = $7, video_link = $8,
              donation_link = $9, background_image_url = $10,
              require_email_verification = $11, auto_email_on_publish = $12,
-             featured = $13, start_date = $14, close_date = $15, updated_at = now()
+             featured = $13, start_date = $14, close_date = $15,
+             partners = $16, updated_at = now()
        WHERE id = $1`,
       [
         id,
@@ -667,6 +694,7 @@ export async function updateCampaign(
         input.featured ?? false,
         new Date(input.startDate).toISOString(),
         new Date(input.closeDate).toISOString(),
+        (input.partners ?? []).map((p) => p.trim()).filter(Boolean),
       ],
     )
 

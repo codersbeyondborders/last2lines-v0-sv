@@ -1,14 +1,27 @@
 import { PageHeader } from "@/components/admin/page-header"
 import { AuthorsTable } from "@/components/admin/authors-table"
-import { getAuthors, getSubmissionCounts } from "@/lib/queries"
+import { getAuthors, getAuthorFilterOptions, getSubmissionCounts } from "@/lib/queries"
 
 // Prevent prerendering; this page requires database queries
 export const dynamic = "force-dynamic"
 
-export default async function AuthorsPage() {
-  const [{ items, nextCursor }, submissionCounts] = await Promise.all([
-    getAuthors(),
+export default async function AuthorsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ search?: string; campaign?: string; country?: string; page?: string }>
+}) {
+  const sp = await searchParams
+  const page = Math.max(1, Number(sp.page ?? 1))
+
+  const [{ items, total }, submissionCounts, filterOptions] = await Promise.all([
+    getAuthors({
+      page,
+      search: sp.search ?? null,
+      campaignId: sp.campaign ?? null,
+      country: sp.country ?? null,
+    }),
     getSubmissionCounts(),
+    getAuthorFilterOptions(),
   ])
 
   return (
@@ -19,8 +32,13 @@ export default async function AuthorsPage() {
       />
       <AuthorsTable
         initialAuthors={items}
-        initialNextCursor={nextCursor}
+        total={total}
+        currentPage={page}
         submissionCounts={submissionCounts}
+        filterOptions={filterOptions}
+        initialSearch={sp.search ?? ""}
+        initialCampaign={sp.campaign ?? ""}
+        initialCountry={sp.country ?? ""}
       />
     </>
   )

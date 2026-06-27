@@ -206,6 +206,24 @@ export default async function CampaignPage({
                 )}
               </div>
 
+              {campaign.partners && campaign.partners.length > 0 && (
+                <div className="mt-6 pt-6 border-t border-border">
+                  <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Campaign partners
+                  </h4>
+                  <ul className="mt-3 flex flex-wrap gap-2" aria-label="Campaign partners">
+                    {campaign.partners.map((partner) => (
+                      <li
+                        key={partner}
+                        className="rounded-full border border-border bg-card px-3 py-1 text-sm text-foreground"
+                      >
+                        {partner}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
               <div className="mt-6 pt-6 border-t border-border">
                 <SocialShare
                   title={campaign.title}

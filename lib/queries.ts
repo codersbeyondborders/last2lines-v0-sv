@@ -67,6 +67,7 @@ interface CampaignRow {
   close_date: Date
   created_at: Date
   contribution_count?: string | number
+  partners: string[]
 }
 
 function mapCampaign(row: CampaignRow): Campaign {
@@ -94,6 +95,7 @@ function mapCampaign(row: CampaignRow): Campaign {
     startDate: new Date(row.start_date).toISOString(),
     closeDate: new Date(row.close_date).toISOString(),
     createdAt: new Date(row.created_at).toISOString(),
+    partners: row.partners ?? [],
   }
 }
 
@@ -395,44 +397,104 @@ export async function getContributionsByStatus(
 
 export interface GetAuthorsOptions {
   limit?: number
+  /** 1-based page number for offset pagination. */
+  page?: number
+  /** Search by author name or email (case-insensitive substring). */
+  search?: string | null
+  /** Filter to authors who have contributed to this campaign id. */
+  campaignId?: string | null
+  /** Filter by exact country code/name. */
+  country?: string | null
+  // Kept for backwards-compat (cursor arg is now ignored in favour of page).
   cursor?: string | null
 }
 
-/** Paginated authors list, newest first. */
+export interface AuthorFilterOptions {
+  campaigns: Array<{ id: string; title: string }>
+  countries: string[]
+}
+
+/** Distinct campaigns and countries for populating filter dropdowns. */
+export async function getAuthorFilterOptions(): Promise<AuthorFilterOptions> {
+  const [campaignsRes, countriesRes] = await Promise.all([
+    query<{ id: string; title: string }>(
+      `SELECT DISTINCT c.id, c.title
+       FROM campaigns c
+       JOIN contributions ct ON ct.campaign_id = c.id
+       ORDER BY c.title ASC`,
+    ),
+    query<{ country: string }>(
+      `SELECT DISTINCT country FROM authors
+       WHERE country IS NOT NULL AND country <> ''
+       ORDER BY country ASC`,
+    ),
+  ])
+  return {
+    campaigns: campaignsRes.rows,
+    countries: countriesRes.rows.map((r) => r.country),
+  }
+}
+
+/** Paginated authors list, newest first. Supports search + filters. */
 export async function getAuthors(
   opts: GetAuthorsOptions = {},
-): Promise<PagedResult<Author>> {
-  const limit = Math.min(opts.limit ?? PAGE_SIZE, 200)
-  const params: unknown[] = []
-  let cursorClause = ""
+): Promise<PagedResult<Author> & { total: number }> {
+  const PAGE_LIMIT = Math.min(opts.limit ?? 20, 100)
+  const page = Math.max(1, opts.page ?? 1)
+  const offset = (page - 1) * PAGE_LIMIT
 
-  if (opts.cursor) {
-    const decoded = decodeCursor(opts.cursor)
-    if (decoded) {
-      params.push(decoded.createdAt, decoded.id)
-      cursorClause = `WHERE (joined_at, id) < ($1, $2)`
-    }
+  const conditions: string[] = []
+  const params: unknown[] = []
+
+  // Campaign filter — join contributions to find authors in that campaign.
+  let joinClause = ""
+  if (opts.campaignId) {
+    params.push(opts.campaignId)
+    joinClause = `JOIN contributions ct_f ON ct_f.author_id = a.id AND ct_f.campaign_id = $${params.length}`
   }
 
-  params.push(limit + 1)
+  if (opts.search) {
+    params.push(`%${opts.search.trim()}%`)
+    const p = params.length
+    conditions.push(`(a.name ILIKE $${p} OR a.email ILIKE $${p})`)
+  }
+
+  if (opts.country) {
+    params.push(opts.country)
+    conditions.push(`a.country = $${params.length}`)
+  }
+
+  const whereClause =
+    conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : ""
+
+  // Total count for pagination UI.
+  const countParams = [...params]
+  const { rows: countRows } = await query<{ total: string }>(
+    `SELECT COUNT(DISTINCT a.id) AS total
+     FROM authors a
+     ${joinClause}
+     ${whereClause}`,
+    countParams,
+  )
+  const total = Number(countRows[0]?.total ?? 0)
+
+  // Fetch the page.
+  params.push(PAGE_LIMIT, offset)
   const { rows } = await query<AuthorRow>(
-    `SELECT * FROM authors
-     ${cursorClause}
-     ORDER BY joined_at DESC, id DESC
-     LIMIT $${params.length}`,
+    `SELECT DISTINCT a.*
+     FROM authors a
+     ${joinClause}
+     ${whereClause}
+     ORDER BY a.joined_at DESC, a.id DESC
+     LIMIT $${params.length - 1} OFFSET $${params.length}`,
     params,
   )
 
-  const hasMore = rows.length > limit
-  const items = hasMore ? rows.slice(0, limit) : rows
-  const lastItem = items[items.length - 1]
-
   return {
-    items: items.map(mapAuthor),
-    nextCursor:
-      hasMore && lastItem
-        ? encodeCursor(lastItem.joined_at, lastItem.id)
-        : null,
+    items: rows.map(mapAuthor),
+    total,
+    // nextCursor kept for interface compatibility — not used by the new pagination.
+    nextCursor: page * PAGE_LIMIT < total ? String(page + 1) : null,
   }
 }
 

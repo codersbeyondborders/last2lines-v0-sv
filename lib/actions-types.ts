@@ -23,6 +23,8 @@ export interface CampaignInput {
   startDate: string
   closeDate: string
   seedCouplets?: SeedCoupletInput[]
+  /** Names/organisations that are partners of this campaign. */
+  partners?: string[]
 }
 
 export interface SubmitResult {

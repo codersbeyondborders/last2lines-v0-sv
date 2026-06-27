@@ -44,6 +44,8 @@ export interface Campaign {
   autoEmailOnPublish: boolean
   /** When true, the campaign is highlighted as featured in the directory. */
   featured: boolean
+  /** Names/organisations that partner with this campaign. */
+  partners: string[]
 }
 
 export interface Contribution {
@@ -112,6 +114,7 @@ export const MOCK_CAMPAIGNS: Campaign[] = [
     requireEmailVerification: false,
     autoEmailOnPublish: false,
     featured: true,
+    partners: ['Green Earth Alliance', 'Climate Action Network'],
   },
   {
     id: 'cmp_water',
@@ -143,6 +146,7 @@ export const MOCK_CAMPAIGNS: Campaign[] = [
     requireEmailVerification: false,
     autoEmailOnPublish: false,
     featured: false,
+    partners: [],
   },
   {
     id: 'cmp_forests',
@@ -174,6 +178,7 @@ export const MOCK_CAMPAIGNS: Campaign[] = [
     requireEmailVerification: false,
     autoEmailOnPublish: false,
     featured: false,
+    partners: ['World Forest Council'],
   },
 ]
 
