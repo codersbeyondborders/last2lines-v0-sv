@@ -773,3 +773,55 @@ export async function signOut() {
   const supabase = await createClient()
   await supabase.auth.signOut()
 }
+
+// ── Contact form ──────────────────────────────────────────────────────────────
+
+export type ContactType = "campaign_request" | "feedback" | "concern" | "general"
+
+export interface ContactInput {
+  type: ContactType
+  name: string
+  email: string
+  subject?: string
+  message: string
+  /** Only used for campaign_request type. */
+  campaignName?: string
+}
+
+/** Persist a contact form submission to the DB. */
+export async function submitContactForm(
+  input: ContactInput,
+): Promise<SubmitResult> {
+  const name = input.name?.trim()
+  const email = input.email?.trim().toLowerCase()
+  const message = input.message?.trim()
+
+  if (!name || name.length < 2)
+    return { ok: false, error: "Please enter your name." }
+  if (!email || !EMAIL_RE.test(email))
+    return { ok: false, error: "Please provide a valid email address." }
+  if (!message || message.length < 10)
+    return { ok: false, error: "Message must be at least 10 characters." }
+  if (message.length > 2000)
+    return { ok: false, error: "Message must be under 2000 characters." }
+
+  try {
+    await query(
+      `INSERT INTO contact_submissions (type, name, email, subject, message, campaign_name)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [
+        input.type,
+        name,
+        email,
+        input.subject?.trim() || null,
+        message,
+        input.campaignName?.trim() || null,
+      ],
+    )
+  } catch (err) {
+    console.error("[contact] DB error:", err)
+    return { ok: false, error: "Something went wrong. Please try again." }
+  }
+
+  return { ok: true }
+}
