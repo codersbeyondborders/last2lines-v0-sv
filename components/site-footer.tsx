@@ -38,6 +38,12 @@ export function SiteFooter() {
             Map
           </Link>
           <Link
+            href="/archives"
+            className="rounded-md transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            Archives
+          </Link>
+          <Link
             href="/terms"
             className="rounded-md transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
