@@ -8,6 +8,7 @@ import { HomepageStats } from "@/components/homepage-stats"
 import { Faq } from "@/components/faq"
 import { Button } from "@/components/ui/button"
 import { getCampaigns, getHomepageStats } from "@/lib/queries"
+import { HowItWorks } from "@/components/how-it-works"
 
 // Revalidate every 60 s so campaign lists and stats stay reasonably fresh
 // without hammering the DB on every request. Skip prerendering at build time
@@ -105,7 +106,7 @@ export default function Home() {
 
             {/* CTAs */}
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-              
+
               <Button
                 size="lg"
                 variant="outline"
@@ -114,36 +115,23 @@ export default function Home() {
                 render={
                   <a href="#campaigns">
                     Explore Campaigns
-                   
-                  </a>
-                }
-              />
 
-               <Button
-                size="lg"
-                nativeButton={false}
-                className="h-11 px-6 text-base"
-                render={
-                  <Link href="/campaign/two-lines-for-the-earth#contribute">
-                    Write Your Lines
-                  </Link>
+                  </a>
                 }
               />
 
               <Button
                 size="lg"
-                variant="ghost"
                 nativeButton={false}
                 className="h-11 px-6 text-base"
                 render={
                   <Link href="/about">
-                    More
-                    <ArrowRight className="size-4" aria-hidden="true" />
+                    Learn More
                   </Link>
                 }
               />
-             
-              
+
+
             </div>
           </div>
         </section>
@@ -157,6 +145,9 @@ export default function Home() {
         <Suspense fallback={<CampaignsSkeleton />}>
           <CampaignsSection />
         </Suspense>
+
+        {/* How it works */}
+        <HowItWorks />
 
         {/* FAQ */}
         <Faq />

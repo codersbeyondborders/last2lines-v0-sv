@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState, useTransition } from "react"
+import { useEffect, useState, useTransition } from "react"
 import { useRouter, usePathname, useSearchParams } from "next/navigation"
 import {
   MoreHorizontal,
@@ -103,7 +103,6 @@ export function ContactSubmissionsTable({
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const [isPending, startTransition] = useTransition()
-  const [, startDelete] = useTransition()
 
   const [items, setItems] = useState(initialItems)
   const [error, setError] = useState<string | null>(null)
@@ -144,14 +143,13 @@ export function ContactSubmissionsTable({
   async function handleDelete(item: ContactSubmission) {
     setError(null)
     setPendingDelete(null)
+    const snapshot = [...items]
     setItems((cur) => cur.filter((i) => i.id !== item.id))
-    startDelete(async () => {
-      const result = await deleteContactSubmission(item.id)
-      if (!result.ok) {
-        setItems((cur) => [item, ...cur])
-        setError(result.error ?? "Failed to delete.")
-      }
-    })
+    const result = await deleteContactSubmission(item.id)
+    if (!result.ok) {
+      setItems(snapshot)
+      setError(result.error ?? "Failed to delete.")
+    }
   }
 
   // Open detail and auto-mark as read
@@ -348,31 +346,31 @@ export function ContactSubmissionsTable({
                         }
                       />
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onSelect={() => openDetail(item)}>
+                        <DropdownMenuItem onClick={() => openDetail(item)}>
                           <Eye className="size-4" aria-hidden="true" />
                           View message
                         </DropdownMenuItem>
                         {item.status !== "read" && (
-                          <DropdownMenuItem onSelect={() => markStatus(item.id, "read")}>
+                          <DropdownMenuItem onClick={() => markStatus(item.id, "read")}>
                             <MailOpen className="size-4" aria-hidden="true" />
                             Mark as read
                           </DropdownMenuItem>
                         )}
                         {item.status !== "archived" && (
-                          <DropdownMenuItem onSelect={() => markStatus(item.id, "archived")}>
+                          <DropdownMenuItem onClick={() => markStatus(item.id, "archived")}>
                             <Archive className="size-4" aria-hidden="true" />
                             Archive
                           </DropdownMenuItem>
                         )}
                         {item.status === "archived" && (
-                          <DropdownMenuItem onSelect={() => markStatus(item.id, "read")}>
+                          <DropdownMenuItem onClick={() => markStatus(item.id, "read")}>
                             <MailOpen className="size-4" aria-hidden="true" />
                             Unarchive
                           </DropdownMenuItem>
                         )}
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
-                          onSelect={() => setPendingDelete(item)}
+                          onClick={() => setPendingDelete(item)}
                           className="text-destructive focus:text-destructive"
                         >
                           <Trash2 className="size-4" aria-hidden="true" />
