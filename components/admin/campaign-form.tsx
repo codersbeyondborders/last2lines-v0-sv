@@ -105,6 +105,9 @@ export function CampaignForm({ campaign, seedCouplets }: { campaign?: Campaign; 
       author: s.author,
     })) ?? [],
   )
+  const [partners, setPartners] = useState<string[]>(
+    campaign?.partners ?? [],
+  )
 
   const [touched, setTouched] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -167,6 +170,7 @@ export function CampaignForm({ campaign, seedCouplets }: { campaign?: Campaign; 
         lineTwo: s.lineTwo,
         author: s.author,
       })),
+      partners: partners.map((p) => p.trim()).filter(Boolean),
     }
     const result =
       isEdit && campaign
@@ -388,6 +392,60 @@ export function CampaignForm({ campaign, seedCouplets }: { campaign?: Campaign; 
             onChange={(e) => setDonationLink(e.target.value)}
             placeholder="https://"
           />
+        </div>
+      </FormSection>
+
+      {/* Campaign Partners */}
+      <FormSection
+        title="Campaign partners"
+        description="Organisations or individuals supporting this campaign. Each entry appears publicly on the campaign page."
+      >
+        {partners.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No partners added yet.</p>
+        ) : (
+          <ul className="flex flex-col gap-2" aria-label="Partners list">
+            {partners.map((partner, i) => (
+              <li key={i} className="flex items-center gap-2">
+                <Label htmlFor={`partner-${i}`} className="sr-only">
+                  Partner {i + 1}
+                </Label>
+                <Input
+                  id={`partner-${i}`}
+                  value={partner}
+                  maxLength={120}
+                  placeholder="Organisation or partner name"
+                  onChange={(e) => {
+                    const updated = [...partners]
+                    updated[i] = e.target.value
+                    setPartners(updated)
+                  }}
+                  aria-label={`Partner ${i + 1}`}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  aria-label={`Remove partner ${i + 1}`}
+                  onClick={() =>
+                    setPartners((prev) => prev.filter((_, idx) => idx !== i))
+                  }
+                >
+                  <Trash2 className="size-4" aria-hidden="true" />
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+        <div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setPartners((prev) => [...prev, ""])}
+          >
+            <Plus className="size-4" aria-hidden="true" />
+            Add partner
+          </Button>
         </div>
       </FormSection>
 

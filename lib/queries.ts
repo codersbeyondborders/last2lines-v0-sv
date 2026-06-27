@@ -67,6 +67,7 @@ interface CampaignRow {
   close_date: Date
   created_at: Date
   contribution_count?: string | number
+  partners: string[]
 }
 
 function mapCampaign(row: CampaignRow): Campaign {
@@ -94,6 +95,7 @@ function mapCampaign(row: CampaignRow): Campaign {
     startDate: new Date(row.start_date).toISOString(),
     closeDate: new Date(row.close_date).toISOString(),
     createdAt: new Date(row.created_at).toISOString(),
+    partners: row.partners ?? [],
   }
 }
 
