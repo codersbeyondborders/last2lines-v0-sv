@@ -10,9 +10,10 @@ import {
   AlertCircle,
   Loader2,
   ChevronDown,
+  Trash2,
 } from "lucide-react"
 import { type Author } from "@/lib/mock-data"
-import { setAuthorStatus, fetchAuthorsPage } from "@/lib/actions"
+import { setAuthorStatus, fetchAuthorsPage, deleteAuthor } from "@/lib/actions"
 import type { GetAuthorsOptions } from "@/lib/queries"
 import {
   Table,
@@ -29,6 +30,18 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { AuthorStatusBadge } from "@/components/admin/status-badges"
@@ -56,6 +69,10 @@ export function AuthorsTable({
   const [nextCursor, setNextCursor] = useState<string | null>(initialNextCursor)
   const [error, setError] = useState<string | null>(null)
   const [loadingMore, startLoadMore] = useTransition()
+  const [deletingId, startDelete] = useTransition()
+
+  // Track which author is pending deletion so the dialog can show their info.
+  const [pendingDelete, setPendingDelete] = useState<Author | null>(null)
 
   const loadMore = useCallback(() => {
     if (!nextCursor) return
@@ -80,6 +97,31 @@ export function AuthorsTable({
     }
   }
 
+  function confirmDelete(author: Author) {
+    setPendingDelete(author)
+  }
+
+  function handleDeleteConfirmed() {
+    if (!pendingDelete) return
+    const id = pendingDelete.id
+    // Optimistically remove from local state immediately.
+    setAuthors((prev) => prev.filter((a) => a.id !== id))
+    setPendingDelete(null)
+    setError(null)
+    startDelete(async () => {
+      const result = await deleteAuthor(id)
+      if (!result.ok) {
+        // Restore the author in the list on failure (re-fetch would be ideal,
+        // but we don't have a full refresh mechanism — show the error instead).
+        setError(result.error ?? "Could not delete this author.")
+      }
+    })
+  }
+
+  const submissionCount = pendingDelete
+    ? (submissionCounts[pendingDelete.id] ?? 0)
+    : 0
+
   if (authors.length === 0) {
     return (
       <Card className="p-10 text-center text-muted-foreground">
@@ -100,6 +142,49 @@ export function AuthorsTable({
           <span>{error}</span>
         </div>
       ) : null}
+
+      {/* Delete confirmation dialog — controlled externally via pendingDelete */}
+      <AlertDialog
+        open={pendingDelete !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingDelete(null)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogMedia>
+              <Trash2 className="size-5 text-destructive" aria-hidden="true" />
+            </AlertDialogMedia>
+            <AlertDialogTitle>Delete author?</AlertDialogTitle>
+            <AlertDialogDescription>
+              <strong className="font-medium text-foreground">
+                {pendingDelete?.name ?? pendingDelete?.email ?? "This author"}
+              </strong>{" "}
+              and{" "}
+              {submissionCount === 0
+                ? "all their contributions"
+                : submissionCount === 1
+                  ? "their 1 contribution"
+                  : `all ${submissionCount} of their contributions`}{" "}
+              will be permanently deleted. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={handleDeleteConfirmed}
+            >
+              {deletingId ? (
+                <Loader2 data-icon="inline-start" className="animate-spin" aria-hidden="true" />
+              ) : (
+                <Trash2 data-icon="inline-start" aria-hidden="true" />
+              )}
+              Delete author
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Card className="overflow-hidden p-0">
         <Table>
@@ -180,6 +265,14 @@ export function AuthorsTable({
                           Ban author
                         </DropdownMenuItem>
                       )}
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        variant="destructive"
+                        onClick={() => confirmDelete(a)}
+                      >
+                        <Trash2 className="size-4" aria-hidden="true" />
+                        Delete author &amp; contributions
+                      </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>

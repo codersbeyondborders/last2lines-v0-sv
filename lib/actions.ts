@@ -361,6 +361,31 @@ export async function moderateContribution(input: {
   return { ok: true }
 }
 
+/**
+ * Permanently delete an author and all their contributions.
+ * Contributions cascade-delete via the ON DELETE CASCADE FK constraint.
+ */
+export async function deleteAuthor(id: string): Promise<SubmitResult> {
+  try {
+    await requireAdmin()
+  } catch {
+    return { ok: false, error: "You must be signed in." }
+  }
+
+  try {
+    await query(`DELETE FROM authors WHERE id = $1`, [id])
+  } catch (err) {
+    console.log("[v0] deleteAuthor error:", err)
+    return { ok: false, error: "Could not delete this author." }
+  }
+
+  revalidatePath("/dashboard/authors")
+  revalidatePath("/dashboard/contributions")
+  revalidatePath("/dashboard")
+  revalidatePath("/campaign/[slug]")
+  return { ok: true }
+}
+
 /** Toggle an author's banned/active status. */
 export async function setAuthorStatus(input: {
   id: string
