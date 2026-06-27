@@ -749,3 +749,86 @@ export async function getContributionsByCountryAllCampaigns(
 
   return result
 }
+
+// ----------------------------------------------------------------------------
+// Contact submissions
+// ----------------------------------------------------------------------------
+
+export interface ContactSubmission {
+  id: string
+  type: "campaign_request" | "feedback" | "concern" | "general"
+  name: string
+  email: string
+  subject: string | null
+  message: string
+  campaignName: string | null
+  status: "new" | "read" | "archived"
+  createdAt: string
+}
+
+export interface GetContactSubmissionsOptions {
+  status?: "new" | "read" | "archived" | "all"
+  type?: string | null
+  page?: number
+  limit?: number
+}
+
+export async function getContactSubmissions(
+  opts: GetContactSubmissionsOptions = {},
+): Promise<{ items: ContactSubmission[]; total: number }> {
+  const limit = Math.min(opts.limit ?? 20, 100)
+  const page = Math.max(1, opts.page ?? 1)
+  const offset = (page - 1) * limit
+  const conditions: string[] = []
+  const params: unknown[] = []
+
+  if (opts.status && opts.status !== "all") {
+    params.push(opts.status)
+    conditions.push(`status = $${params.length}`)
+  }
+  if (opts.type && opts.type !== "all") {
+    params.push(opts.type)
+    conditions.push(`type = $${params.length}`)
+  }
+
+  const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : ""
+  const baseParams = [...params]
+
+  const [countRes, rowsRes] = await Promise.all([
+    query<{ total: string }>(
+      `SELECT COUNT(*) AS total FROM contact_submissions ${where}`,
+      baseParams,
+    ),
+    query<{
+      id: string
+      type: string
+      name: string
+      email: string
+      subject: string | null
+      message: string
+      campaign_name: string | null
+      status: string
+      created_at: Date
+    }>(
+      `SELECT * FROM contact_submissions ${where}
+       ORDER BY created_at DESC
+       LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+      [...params, limit, offset],
+    ),
+  ])
+
+  return {
+    total: Number(countRes.rows[0]?.total ?? 0),
+    items: rowsRes.rows.map((r) => ({
+      id: r.id,
+      type: r.type as ContactSubmission["type"],
+      name: r.name,
+      email: r.email,
+      subject: r.subject,
+      message: r.message,
+      campaignName: r.campaign_name,
+      status: r.status as ContactSubmission["status"],
+      createdAt: new Date(r.created_at).toISOString(),
+    })),
+  }
+}

@@ -25,3 +25,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# editor
+.vscode
+
+# project-specific
+SEEDING_INSTRUCTIONS.md
+package-lock.json
+seed.sh
