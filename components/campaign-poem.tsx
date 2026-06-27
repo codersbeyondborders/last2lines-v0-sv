@@ -88,11 +88,6 @@ function Couplet({
         <cite className="not-italic font-medium text-foreground/80">
           {author}
         </cite>
-        {isSeed && (
-          <span className="ml-2 inline-block rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
-            Seed
-          </span>
-        )}
         {couplet.country ? (
           <span className="text-muted-foreground">, {couplet.country}</span>
         ) : null}
