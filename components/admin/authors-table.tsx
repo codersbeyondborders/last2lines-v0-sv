@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useState, useTransition } from "react"
+import { useEffect, useRef, useState, useTransition } from "react"
 import { useRouter, usePathname, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import {
@@ -91,16 +91,26 @@ export function AuthorsTable({
   const pathname = usePathname()
   const searchParams = useSearchParams()
 
+  // Render directly from the prop — the server always sends fresh data after
+  // every URL navigation, so no local authors state is needed.
   const [authors, setAuthors] = useState<Author[]>(initialAuthors)
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
   const [deletingId, startDelete] = useTransition()
   const [pendingDelete, setPendingDelete] = useState<Author | null>(null)
 
-  // Controlled filter state — drives URL params on submit.
+  // Keep local list in sync whenever the server sends a new prop set.
+  useEffect(() => {
+    setAuthors(initialAuthors)
+  }, [initialAuthors])
+
+  // Controlled filter state — mirrors URL params and drives live updates.
   const [search, setSearch] = useState(initialSearch)
   const [campaign, setCampaign] = useState(initialCampaign || "all")
   const [country, setCountry] = useState(initialCountry || "all")
+
+  // Debounce timer ref for the search input.
+  const searchDebounce = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
@@ -149,10 +159,10 @@ export function AuthorsTable({
   const hasActiveFilters =
     !!initialSearch || (!!initialCampaign && initialCampaign !== "all") || (!!initialCountry && initialCountry !== "all")
 
-  // ── Per-row status toggle ──────────────────────────────────────────────────
+  // ── Per-row status toggle (optimistic) ────────────────────────────────────
   async function setStatus(id: string, status: Author["status"]) {
     setError(null)
-    const previous = authors
+    const previous = [...authors]
     setAuthors((prev) => prev.map((a) => (a.id === id ? { ...a, status } : a)))
     const result = await setAuthorStatus({ id, status })
     if (!result.ok) {
@@ -199,9 +209,13 @@ export function AuthorsTable({
               type="search"
               placeholder="Name or email…"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") applyFilters({ search: e.currentTarget.value })
+              onChange={(e) => {
+                const val = e.target.value
+                setSearch(val)
+                if (searchDebounce.current) clearTimeout(searchDebounce.current)
+                searchDebounce.current = setTimeout(() => {
+                  applyFilters({ search: val })
+                }, 350)
               }}
               className="pl-9"
               aria-label="Search authors by name or email"
@@ -263,34 +277,28 @@ export function AuthorsTable({
           </Select>
         </div>
 
-        {/* Search apply + clear */}
-        <div className="flex items-end gap-2">
-          <Button
-            variant="default"
-            size="sm"
-            onClick={() => applyFilters()}
-            disabled={isPending}
-            aria-label="Apply search"
-          >
-            {isPending ? (
-              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-            ) : (
-              <Search className="size-4" aria-hidden="true" />
+        {/* Clear filters */}
+        {(hasActiveFilters || isPending) && (
+          <div className="flex items-end gap-2">
+            {isPending && (
+              <Loader2
+                className="size-4 animate-spin self-center text-muted-foreground"
+                aria-hidden="true"
+              />
             )}
-            Search
-          </Button>
-          {hasActiveFilters && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={clearFilters}
-              aria-label="Clear all filters"
-            >
-              <X className="size-4" aria-hidden="true" />
-              Clear
-            </Button>
-          )}
-        </div>
+            {hasActiveFilters && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearFilters}
+                aria-label="Clear all filters"
+              >
+                <X className="size-4" aria-hidden="true" />
+                Clear
+              </Button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* ── Result count ─────────────────────────────────────────────────── */}
