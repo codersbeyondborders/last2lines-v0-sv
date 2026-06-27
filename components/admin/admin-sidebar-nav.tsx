@@ -10,6 +10,7 @@ import {
   Settings,
   Feather,
   LogOut,
+  Inbox,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { signOut } from "@/lib/actions"
@@ -19,6 +20,7 @@ const NAV_ITEMS = [
   { href: "/dashboard/campaigns", label: "Campaigns", icon: Megaphone },
   { href: "/dashboard/contributions", label: "Contributions", icon: FileText },
   { href: "/dashboard/authors", label: "Authors", icon: Users },
+  { href: "/dashboard/contact", label: "Contact", icon: Inbox },
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ]
 

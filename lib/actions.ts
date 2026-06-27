@@ -788,7 +788,14 @@ export interface ContactInput {
   campaignName?: string
 }
 
-/** Persist a contact form submission to the DB. */
+const CONTACT_TYPE_LABELS: Record<string, string> = {
+  campaign_request: "New Campaign Request",
+  feedback: "Feedback",
+  concern: "Concern",
+  general: "General Enquiry",
+}
+
+/** Persist a contact form submission to the DB and notify the admin by email. */
 export async function submitContactForm(
   input: ContactInput,
 ): Promise<SubmitResult> {
@@ -823,5 +830,94 @@ export async function submitContactForm(
     return { ok: false, error: "Something went wrong. Please try again." }
   }
 
+  // Fire-and-forget admin notification email via Resend.
+  const adminEmail = process.env.ADMIN_CONTACT_EMAIL
+  const resendKey = process.env.RESEND_API_KEY
+  if (adminEmail && resendKey) {
+    const typeLabel = CONTACT_TYPE_LABELS[input.type] ?? input.type
+    const subject = `[Last2Lines] ${typeLabel} from ${name}`
+    const campaignLine =
+      input.campaignName
+        ? `<tr><td style="padding:6px 0;color:#6b7280;font-size:13px">Campaign</td><td style="padding:6px 0;font-size:13px">${input.campaignName}</td></tr>`
+        : ""
+    const subjectLine =
+      input.subject
+        ? `<tr><td style="padding:6px 0;color:#6b7280;font-size:13px">Subject</td><td style="padding:6px 0;font-size:13px">${input.subject}</td></tr>`
+        : ""
+    const html = `
+<div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:32px 16px">
+  <h2 style="margin:0 0 8px;font-size:20px">New contact submission</h2>
+  <p style="margin:0 0 24px;color:#6b7280;font-size:14px">${typeLabel}</p>
+  <table style="width:100%;border-collapse:collapse">
+    <tr><td style="padding:6px 0;color:#6b7280;font-size:13px;width:110px">From</td><td style="padding:6px 0;font-size:13px">${name} &lt;${email}&gt;</td></tr>
+    ${campaignLine}
+    ${subjectLine}
+  </table>
+  <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0"/>
+  <p style="font-size:14px;white-space:pre-wrap;line-height:1.6">${message.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>
+  <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0"/>
+  <p style="font-size:12px;color:#9ca3af">Received via Last2Lines contact form. <a href="${process.env.NEXT_PUBLIC_SITE_URL ?? "https://last2lines.org"}/dashboard/contact" style="color:#1f6f54">View in dashboard</a>.</p>
+</div>`
+
+    fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${resendKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: "Last2Lines <noreply@last2lines.org>",
+        to: [adminEmail],
+        reply_to: email,
+        subject,
+        html,
+      }),
+    }).catch((err) => console.error("[contact] Resend error:", err))
+  }
+
+  return { ok: true }
+}
+
+export type ContactStatus = "new" | "read" | "archived"
+
+/** Update the read/archived status of a contact submission. */
+export async function updateContactStatus(
+  id: string,
+  status: ContactStatus,
+): Promise<SubmitResult> {
+  try {
+    await requireAdmin()
+  } catch {
+    return { ok: false, error: "Unauthorized." }
+  }
+  try {
+    await query(
+      `UPDATE contact_submissions SET status = $2 WHERE id = $1`,
+      [id, status],
+    )
+    revalidatePath("/dashboard/contact")
+  } catch (err) {
+    console.error("[contact] updateStatus error:", err)
+    return { ok: false, error: "Could not update status." }
+  }
+  return { ok: true }
+}
+
+/** Permanently delete a contact submission. */
+export async function deleteContactSubmission(
+  id: string,
+): Promise<SubmitResult> {
+  try {
+    await requireAdmin()
+  } catch {
+    return { ok: false, error: "Unauthorized." }
+  }
+  try {
+    await query(`DELETE FROM contact_submissions WHERE id = $1`, [id])
+    revalidatePath("/dashboard/contact")
+  } catch (err) {
+    console.error("[contact] delete error:", err)
+    return { ok: false, error: "Could not delete submission." }
+  }
   return { ok: true }
 }
