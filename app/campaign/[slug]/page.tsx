@@ -1,7 +1,7 @@
 import { Suspense } from "react"
 import { notFound } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft, BookOpen, Heart, PlayCircle } from "lucide-react"
+import { ArrowLeft, Heart, PlayCircle } from "lucide-react"
 import { SocialShare } from "@/components/social-share"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
@@ -261,7 +261,7 @@ export default async function CampaignPage({
                   variant="outline"
                   size="sm"
                   nativeButton={false}
-                  render={<a href="#poem">Read the poem</a>}
+                  render={<a href="#poem">Read the Current poem</a>}
                 />
                 <Button
                   size="sm"
@@ -274,7 +274,6 @@ export default async function CampaignPage({
                   nativeButton={false}
                   render={
                     <Link href={`/campaign/${campaign.slug}/poem`}>
-                      <BookOpen className="size-4" aria-hidden="true" />
                       Read the full poem
                     </Link>
                   }
@@ -311,7 +310,6 @@ export default async function CampaignPage({
                 nativeButton={false}
                 render={
                   <Link href={`/campaign/${campaign.slug}/poem`}>
-                    <BookOpen className="size-4" aria-hidden="true" />
                     Read the full poem
                   </Link>
                 }

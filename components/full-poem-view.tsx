@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react"
 import Link from "next/link"
-import { ArrowLeft, BookOpen, PenLine, Search, X } from "lucide-react"
+import { ArrowLeft, BookOpen, Search, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { Contribution } from "@/lib/mock-data"
@@ -132,7 +132,6 @@ export function FullPoemView({
         <div className="flex justify-center pt-2 pb-4">
           <Button size="lg" nativeButton={false} render={
             <Link href={`/campaign/${campaignSlug}#contribute`}>
-              <PenLine className="size-4" aria-hidden="true" />
               Write your two lines
             </Link>
           } />
