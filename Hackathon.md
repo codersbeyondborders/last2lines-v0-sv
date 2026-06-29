@@ -7,18 +7,19 @@
 ## Table of Contents
 
 1. [Introduction](#introduction)
-2. [Inspiration & Background](#inspiration--background)
-3. [What It Does](#what-it-does)
-4. [Architecture & Implementation](#architecture--implementation)
-5. [Application Flows](#application-flows)
-6. [Why Vercel](#why-vercel)
-7. [Why Amazon Aurora PostgreSQL](#why-amazon-aurora-postgresql)
-8. [Why v0](#why-v0)
-9. [Challenges](#challenges)
-10. [Accomplishments](#accomplishments)
-11. [What I Learned](#what-i-learned)
-12. [What's Next](#whats-next)
-13. [Before & After](#before--after)
+2. [How I Re-Built It](#how-i-re-built-it)
+3. [Inspiration & Background](#inspiration--background)
+4. [What It Does](#what-it-does)
+5. [Architecture & Implementation](#architecture--implementation)
+6. [Application Flows](#application-flows)
+7. [Why Vercel](#why-vercel)
+8. [Why Amazon Aurora PostgreSQL](#why-amazon-aurora-postgresql)
+9. [Why v0](#why-v0)
+10. [Challenges](#challenges)
+11. [Accomplishments](#accomplishments)
+12. [What I Learned](#what-i-learned)
+13. [What's Next](#whats-next)
+14. [Before & After](#before--after)
 
 ---
 
@@ -27,6 +28,12 @@
 **Last2Lines** is an AI-powered social campaigning platform that unites global voices by having the world write a single poem — two lines at a time. For this hackathon, I completely re-architected the platform into **Last2Lines 2.0**: a production-ready, serverless powerhouse.
 
 By scaffolding a responsive Next.js frontend with **Vercel v0** and migrating the data foundation to **AWS Aurora PostgreSQL**, Last2Lines is now a highly scalable application engineered for enterprise-level concurrent global collaboration — built over a single weekend.
+
+---
+
+## How I Re-Built It
+
+I started with a 10-year-old PHP + MySQL monolith and — over a single weekend — systematically dismantled and replaced every layer: **v0** scaffolded the entire frontend, generating WCAG-compliant, dark/light-mode-aware React components at a pace that would have taken weeks manually; **Next.js 16 App Router** replaced the legacy PHP routing with React Server Components for reads and Server Actions for every mutation, eliminating a separate API layer entirely; **AWS Aurora PostgreSQL** with IAM database authentication replaced the MySQL backend, trading static passwords for short-lived cryptographic tokens generated per connection via `@aws-sdk/rds-signer`, with **RDS Proxy** handling the connection multiplexing inherent to serverless; and **AWS Bedrock (Amazon Nova Micro)**, routed through the **Vercel AI Gateway** using OIDC federation, replaced manual human-only moderation with a three-verdict AI pipeline — all without a single stored credential. The result is one unified IAM role authenticating two AWS services and zero secrets anywhere in the codebase, deployed on Vercel with Fluid Compute, ISR, Edge Middleware session management, and OpenTelemetry tracing — a production-hardened, globally scalable platform built from a legacy prototype in 48 hours.
 
 ---
 
